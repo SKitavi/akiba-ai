@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local env/config
+.env
+
+# Databases and reports artifacts
+*.db
+*.sqlite
+*.sqlite3
+reports/*
+!reports/.gitkeep
+
+# Raw generated data
+data/raw/*
+!data/raw/.gitkeep
+
+# Streamlit local config/state
+.streamlit/
+
+# Editor/OS
+.DS_Store
+.vscode/
+.idea/
