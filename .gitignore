@@ -25,6 +25,12 @@ reports/*
 data/raw/*
 !data/raw/.gitkeep
 
+# Trained model artifacts (tracked via .meta.json + .eval.json only)
+models/*.json
+models/*.bin
+models/*.ubj
+!models/.gitkeep
+
 # Streamlit local config/state
 .streamlit/
 
