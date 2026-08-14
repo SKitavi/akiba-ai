@@ -59,3 +59,35 @@ def test_generate_dataset_structure() -> None:
     app_ids = set(df_applicants["applicant_id"])
     sms_app_ids = set(df_sms["applicant_id"])
     assert sms_app_ids.issubset(app_ids)
+
+
+def test_generate_dataset_determinism() -> None:
+    """Verifies that dataset generation is fully deterministic when resetting seeds."""
+    import random
+    import numpy as np
+
+    # Reset seeds before the first run
+    random.seed(42)
+    np.random.seed(42)
+    df_app1, df_sms1 = generate_dataset(5)
+
+    # Reset seeds before the second run
+    random.seed(42)
+    np.random.seed(42)
+    df_app2, df_sms2 = generate_dataset(5)
+
+    # Verify identical output frames
+    pd.testing.assert_frame_equal(df_app1, df_app2)
+    pd.testing.assert_frame_equal(df_sms1, df_sms2)
+
+
+def test_default_rate_calibration() -> None:
+    """Verifies that calibrate_default_labels targets approximately 20% default rate."""
+    from src.data_gen.generate_synthetic_data import calibrate_default_labels
+
+    df_applicants, df_sms = generate_dataset(50)
+    df_final = calibrate_default_labels(df_applicants, df_sms)
+
+    # Expected default rate is 20%
+    default_rate = df_final["default_label"].mean()
+    assert abs(default_rate - 0.20) < 0.05  # Within acceptable tolerance
