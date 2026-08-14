@@ -274,14 +274,8 @@ def generate_dataset(num_applicants=NUM_APPLICANTS):
     return pd.DataFrame(applicants), pd.DataFrame(sms_logs)
 
 
-# ----------------------------------------------------------------------
-# EXECUTION & RISK LABEL CALIBRATION
-# ----------------------------------------------------------------------
-def main():
-    print("1. Generating Base Applicant Cohort & SMS Logs...")
-    df_applicants, df_sms = generate_dataset(NUM_APPLICANTS)
-
-    print("2. Computing Ground-Truth Risk Indicators...")
+def calibrate_default_labels(df_applicants: pd.DataFrame, df_sms: pd.DataFrame) -> pd.DataFrame:
+    """Computes ground-truth risk indicators and calibrates default labels (~20% rate)."""
     applicant_metrics = []
 
     for app_id, group in df_sms.groupby("applicant_id"):
@@ -341,6 +335,18 @@ def main():
         df_metrics[["applicant_id", "net_flow", "tx_count", "low_balance_events", "default_label"]],
         on="applicant_id",
     )
+    return df_final_applicants
+
+
+# ----------------------------------------------------------------------
+# EXECUTION & RISK LABEL CALIBRATION
+# ----------------------------------------------------------------------
+def main():
+    print("1. Generating Base Applicant Cohort & SMS Logs...")
+    df_applicants, df_sms = generate_dataset(NUM_APPLICANTS)
+
+    print("2. Computing Ground-Truth Risk Indicators...")
+    df_final_applicants = calibrate_default_labels(df_applicants, df_sms)
 
     # Save Datasets to Disk
     PROJECT_ROOT = Path(__file__).resolve().parents[2]
