@@ -6,9 +6,9 @@ Sprint day due: Day 3 (Aug 12) - parsing/features/storage milestone.
 """
 
 from pathlib import Path
+from src.ingestion.ocr_parser import extract_text_from_image
 
 
-# TODO(Swafiyah): Implement pytesseract preprocessing + extraction flow.
 def extract_text_from_receipt(image_path: Path) -> str:
     """Extract OCR text from a synthetic receipt image."""
-    raise NotImplementedError("OCR implementation is planned for Day 3.")
+    return extract_text_from_image(image_path)
