@@ -26,6 +26,7 @@ def test_parse_momo_sms() -> None:
     assert res["balance"] == 12000.0
     assert res["counterparty"] == "25078123456"
     assert res["provider"] == "MTN_MoMo"
+    assert res["tx_id"] is None
 
 
 def test_parse_receipt_format() -> None:

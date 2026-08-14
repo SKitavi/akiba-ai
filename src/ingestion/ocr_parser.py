@@ -214,8 +214,8 @@ def extract_text_from_image(image_path: Union[str, Path]) -> str:
 
     if HAS_TESSERACT and HAS_PILLOW:
         try:
-            img = Image.open(image_path)
-            extracted = pytesseract.image_to_string(img)
+            with Image.open(image_path) as img:
+                extracted = pytesseract.image_to_string(img)
             if isinstance(extracted, str) and extracted.strip():
                 return extracted
         except Exception:
@@ -305,9 +305,13 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
 
     # Attempt 3: Numeric only match of length 10-12 (MTN MoMo style)
     if not tx_id:
-        num_candidates = re.findall(r"\b(\d{10,12})\b", cleaned_text)
-        if num_candidates:
-            tx_id = num_candidates[0]
+        if (
+            provider == "MTN_MoMo"
+            and any(k in lower_text for k in ("txid", "transaction id", "transaction ref", "reference"))
+        ):
+            num_candidates = re.findall(r"\b(\d{10,12})\b", cleaned_text)
+            if num_candidates:
+                tx_id = num_candidates[0]
 
     # 3. Extract Amount, Fee, and Balance
     amount = None
