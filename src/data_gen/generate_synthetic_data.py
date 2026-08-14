@@ -50,7 +50,8 @@ def generate_phone(provider):
     """Generates localized telephone numbers."""
     if provider == "M-Pesa":
         return f"07{random.randint(10000000, 99999999)}"
-    return f"25078{random.randint(100000, 999999)}"
+    return f"25078{random.randint(1000000, 9999999)}"
+
 
 # ----------------------------------------------------------------------
 # PROVIDER-SPECIFIC SMS FORMATTER ENGINE
@@ -231,74 +232,79 @@ def generate_dataset(num_applicants=NUM_APPLICANTS):
 # ----------------------------------------------------------------------
 # EXECUTION & RISK LABEL CALIBRATION
 # ----------------------------------------------------------------------
-print("1. Generating Base Applicant Cohort & SMS Logs...")
-df_applicants, df_sms = generate_dataset(NUM_APPLICANTS)
+def main():
+    print("1. Generating Base Applicant Cohort & SMS Logs...")
+    df_applicants, df_sms = generate_dataset(NUM_APPLICANTS)
 
-print("2. Computing Ground-Truth Risk Indicators...")
-applicant_metrics = []
+    print("2. Computing Ground-Truth Risk Indicators...")
+    applicant_metrics = []
 
-for app_id, group in df_sms.groupby("applicant_id"):
-    inflows = group[group["tx_type"].isin(["CASH_IN", "P2P_RECEIVE"])]["amount"].sum()
-    outflows = group[group["tx_type"].isin(["CASH_OUT", "P2P_SEND", "BUY_GOODS_TILL", "MOMOPAY_MERCHANT", "PAYBILL", "UTILITY", "AIRTIME"])]["amount"].sum()
-    net_flow = inflows - outflows
-    tx_count = len(group)
-    low_balance_events = (group["post_balance"] < 1500).sum()
+    for app_id, group in df_sms.groupby("applicant_id"):
+        inflows = group[group["tx_type"].isin(["CASH_IN", "P2P_RECEIVE"])]["amount"].sum()
+        outflows = group[group["tx_type"].isin(["CASH_OUT", "P2P_SEND", "BUY_GOODS_TILL", "MOMOPAY_MERCHANT", "PAYBILL", "UTILITY", "AIRTIME"])]["amount"].sum()
+        net_flow = inflows - outflows
+        tx_count = len(group)
+        low_balance_events = (group["post_balance"] < 1500).sum()
 
-    persona_row = df_applicants.loc[df_applicants["applicant_id"] == app_id]
-    persona = persona_row["persona"].values[0]
-    income = persona_row["avg_monthly_income"].values[0]
+        persona_row = df_applicants.loc[df_applicants["applicant_id"] == app_id]
+        persona = persona_row["persona"].values[0]
+        income = persona_row["avg_monthly_income"].values[0]
 
-    # Compute net flow relative to baseline monthly income
-    net_flow_ratio = net_flow / income if income > 0 else 0.0
+        # Compute net flow relative to baseline monthly income
+        net_flow_ratio = net_flow / income if income > 0 else 0.0
 
-    # Mathematical Ground-Truth Risk Score using relative ratio features # cite: 8, 28, 29
-    risk_score = (
-        (-3.0 * net_flow_ratio) +
-        (0.20 * low_balance_events) +
-        (-0.015 * tx_count) +
-        (0.6 if persona == "farmer" and net_flow < 0 else 0) +
-        np.random.normal(0, 0.4)
-    )
+        # Mathematical Ground-Truth Risk Score using relative ratio features # cite: 8, 28, 29
+        risk_score = (
+            (-3.0 * net_flow_ratio) +
+            (0.20 * low_balance_events) +
+            (-0.015 * tx_count) +
+            (0.6 if persona == "farmer" and net_flow < 0 else 0) +
+            np.random.normal(0, 0.4)
+        )
 
-    applicant_metrics.append({
-        "applicant_id": app_id,
-        "net_flow": net_flow,
-        "tx_count": tx_count,
-        "low_balance_events": low_balance_events,
-        "raw_risk_score": risk_score
-    })
+        applicant_metrics.append({
+            "applicant_id": app_id,
+            "net_flow": net_flow,
+            "tx_count": tx_count,
+            "low_balance_events": low_balance_events,
+            "raw_risk_score": risk_score
+        })
 
-df_metrics = pd.DataFrame(applicant_metrics)
+    df_metrics = pd.DataFrame(applicant_metrics)
 
-# Calibrate Target Non-Performing Loan (Default) Rate ~ 20% # cite: 3, 9, 30, 31
-threshold = df_metrics["raw_risk_score"].quantile(1 - TARGET_DEFAULT_RATE)
-df_metrics["default_label"] = (df_metrics["raw_risk_score"] >= threshold).astype(int)
+    # Calibrate Target Non-Performing Loan (Default) Rate ~ 20% # cite: 3, 9, 30, 31
+    threshold = df_metrics["raw_risk_score"].quantile(1 - TARGET_DEFAULT_RATE)
+    df_metrics["default_label"] = (df_metrics["raw_risk_score"] >= threshold).astype(int)
 
-# Combine into final applicant target frame
-df_final_applicants = pd.merge(df_applicants, df_metrics[["applicant_id", "net_flow", "tx_count", "low_balance_events", "default_label"]], on="applicant_id")
+    # Combine into final applicant target frame
+    df_final_applicants = pd.merge(df_applicants, df_metrics[["applicant_id", "net_flow", "tx_count", "low_balance_events", "default_label"]], on="applicant_id")
 
-# Save Datasets to Disk
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = PROJECT_ROOT / "data" / "raw"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+    # Save Datasets to Disk
+    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+    DATA_DIR = PROJECT_ROOT / "data" / "raw"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-df_sms.to_csv(DATA_DIR / "synthetic_momo_sms_logs.csv", index=False)
-df_final_applicants.to_csv(DATA_DIR / "synthetic_applicants_labeled.csv", index=False)
+    df_sms.to_csv(DATA_DIR / "synthetic_momo_sms_logs.csv", index=False)
+    df_final_applicants.to_csv(DATA_DIR / "synthetic_applicants_labeled.csv", index=False)
 
-# ----------------------------------------------------------------------
-# DATASET SUMMARY REPORT
-# ----------------------------------------------------------------------
-print("\n" + "="*50)
-print("     SYNTHETIC DATASET GENERATION SUMMARY")
-print("="*50)
-print(f"Total Applicants Labeled: {len(df_final_applicants)}")
-print(f"Total SMS Logs Generated : {len(df_sms)}")
-print(f"Calibrated Default Rate  : {df_final_applicants['default_label'].mean() * 100:.2f}%")
-print("-" * 50)
-print("Default Rate Distribution by Persona:")
-print(pd.crosstab(df_final_applicants["persona"], df_final_applicants["default_label"], normalize="index").round(3) * 100)
-print("-" * 50)
-print("Sample Generated SMS Receipts:")
-for sample_sms in df_sms["sms_text"].sample(3, random_state=SEED):
-    print(f" > {sample_sms}")
-print("="*50)
+    # ----------------------------------------------------------------------
+    # DATASET SUMMARY REPORT
+    # ----------------------------------------------------------------------
+    print("\n" + "="*50)
+    print("     SYNTHETIC DATASET GENERATION SUMMARY")
+    print("="*50)
+    print(f"Total Applicants Labeled: {len(df_final_applicants)}")
+    print(f"Total SMS Logs Generated : {len(df_sms)}")
+    print(f"Calibrated Default Rate  : {df_final_applicants['default_label'].mean() * 100:.2f}%")
+    print("-" * 50)
+    print("Default Rate Distribution by Persona:")
+    print(pd.crosstab(df_final_applicants["persona"], df_final_applicants["default_label"], normalize="index").round(3) * 100)
+    print("-" * 50)
+    print("Sample Generated SMS Receipts:")
+    for sample_sms in df_sms["sms_text"].sample(3, random_state=SEED):
+        print(f" > {sample_sms}")
+    print("="*50)
+
+
+if __name__ == "__main__":
+    main()

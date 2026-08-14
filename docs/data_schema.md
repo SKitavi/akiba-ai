@@ -18,7 +18,8 @@ Contains raw and parsed mobile money transaction receipts generated for syntheti
 | `tx_type` | Categorical | - | Transaction classification | `P2P_SEND`, `P2P_RECEIVE`, `CASH_IN`, `CASH_OUT`, `BUY_GOODS_TILL`, `MOMOPAY_MERCHANT`, `PAYBILL`, `UTILITY`, `AIRTIME` |
 | `amount` | Float | - | Nominal transaction value | `750.00` (KES) / `2500` (RWF) |
 | `post_balance` | Float | - | Wallet balance immediately following the transaction | `1420.00` |
-| `sms_text` | Text | - | Raw provider-authentic SMS message body (includes Till, Paybill, utility IDs, fees, and promo footers) | `UH13Q2B7N6 Confirmed. Ksh750.00 sent to HARUN MWANGI 0112259522 on 1/8/26 at 5:19 PM. New M-PESA balance is Ksh0.00.` |
+| `sms_text` | Text | - | Raw provider-authentic SMS message body (includes Till, Paybill, utility IDs, fees, and promo footers) | `UH13Q2B7N6 Confirmed. Ksh750.00 sent to 0712345678 on 12/03/26 at 05:19 PM. New M-PESA balance is Ksh0.00. Transaction cost, Ksh12.00. Download My OneApp on https://saf.cx/lPKcC` |
+
 
 ---
 
