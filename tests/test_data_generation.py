@@ -1,6 +1,5 @@
 """Tests for synthetic data generation engine."""
 
-import pytest
 import pandas as pd
 from src.data_gen.generate_synthetic_data import generate_dataset, generate_phone, generate_tx_id
 
@@ -52,7 +51,7 @@ def test_generate_dataset_structure() -> None:
         "sms_text",
         "tx_type",
         "amount",
-        "post_balance"
+        "post_balance",
     }
     assert expected_sms_cols.issubset(df_sms.columns)
 
