@@ -357,7 +357,11 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
 
     elif provider == "MTN_MoMo":
         # Extract all RWF amounts
-        rwf_matches = re.findall(r"\b([\d,]+)\s*RWF\b|\bRWF\s*([\d,]+)\b", cleaned_text, re.IGNORECASE)
+        rwf_matches = re.findall(
+            r"\b([\d,]+)\s*RWF\b|\bRWF\s*([\d,]+)\b",
+            cleaned_text,
+            re.IGNORECASE,
+        )
         rwf_amounts = [m[0] or m[1] for m in rwf_matches if m[0] or m[1]]
         if rwf_amounts:
             if amount is None:
