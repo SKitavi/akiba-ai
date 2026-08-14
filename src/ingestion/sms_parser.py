@@ -12,4 +12,3 @@ from src.ingestion.ocr_parser import parse_transaction_text
 def parse_sms_message(message: str) -> dict[str, Any]:
     """Parse one SMS record into normalized fields."""
     return parse_transaction_text(message)
-

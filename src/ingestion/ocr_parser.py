@@ -16,6 +16,7 @@ from typing import Any, Union
 # Try to import pytesseract and define a safety flag
 try:
     import pytesseract
+
     HAS_TESSERACT = True
 except (ImportError, ModuleNotFoundError):
     HAS_TESSERACT = False
@@ -23,6 +24,7 @@ except (ImportError, ModuleNotFoundError):
 # Try to import Pillow for receipt image generation
 try:
     from PIL import Image, ImageDraw, ImageFont
+
     HAS_PILLOW = True
 except (ImportError, ModuleNotFoundError):
     HAS_PILLOW = False
@@ -36,9 +38,9 @@ def get_font(size: int = 14) -> Any:
     # Common Windows monospaced font paths
     font_paths = [
         r"C:\Windows\Fonts\consolab.ttf",  # Consolas Bold
-        r"C:\Windows\Fonts\consola.ttf",   # Consolas Regular
-        r"C:\Windows\Fonts\cour.ttf",      # Courier New
-        r"C:\Windows\Fonts\lucon.ttf",     # Lucida Console
+        r"C:\Windows\Fonts\consola.ttf",  # Consolas Regular
+        r"C:\Windows\Fonts\cour.ttf",  # Courier New
+        r"C:\Windows\Fonts\lucon.ttf",  # Lucida Console
     ]
     for p in font_paths:
         if os.path.exists(p):
@@ -71,7 +73,7 @@ def generate_sample_receipt_image(
     amount: float = 2500.0,
     fee: float = 0.0,
     balance: float = 15400.0,
-    counterparty: Union[str, None] = None
+    counterparty: Union[str, None] = None,
 ) -> None:
     """Generates a realistic thermal receipt PNG image for testing purposes.
 
@@ -104,12 +106,16 @@ def generate_sample_receipt_image(
         ("LINE", "-"),
         ("KEYVAL", "Amount Paid:", f"Ksh {amount:,.2f}" if provider == "M-Pesa" else f"{int(amount)} RWF"),
         ("KEYVAL", "Service Fee:", f"Ksh {fee:,.2f}" if provider == "M-Pesa" else f"{int(fee)} RWF"),
-        ("KEYVAL", "Wallet Balance:", f"Ksh {balance:,.2f}" if provider == "M-Pesa" else f"{int(balance)} RWF"),
+        (
+            "KEYVAL",
+            "Wallet Balance:",
+            f"Ksh {balance:,.2f}" if provider == "M-Pesa" else f"{int(balance)} RWF",
+        ),
         ("LINE", "-"),
         ("KEYVAL", "Status:", "SUCCESSFUL"),
         ("LINE", "-"),
         ("CENTER", "Offline Verification Receipt"),
-        ("CENTER", "Thank You!")
+        ("CENTER", "Thank You!"),
     ]
 
     line_height = 25
@@ -200,7 +206,7 @@ def extract_text_from_image(image_path: Union[str, Path]) -> str:
         The extracted OCR text or a realistic mock fallback.
     """
     path_str = str(image_path).lower()
-    
+
     # Inferred provider based on filename for targeted fallback stubbing
     provider = "M-Pesa"
     if "momo" in path_str or "mtn" in path_str:
@@ -239,7 +245,6 @@ COUNTERPARTY_PATTERNS = [
     r"withdrawn from Agent\s+(.*?)\s+on\s+\d",
     r"Received Ksh\s*[\d,.]+\s+from Agent\s+(.*?)\s+on\s+\d",
     r"paid to\s+(.*?)\s+on\s+\d",
-    
     # MTN MoMo SMS
     r"transferred to\s+(.*?)\s+at\s+\d",
     r"received\s+[\d,]+\s*RWF\s+from\s+(.*?)\s+at\s+\d",
@@ -248,9 +253,8 @@ COUNTERPARTY_PATTERNS = [
     r"Payment of\s+[\d,]+\s*RWF\s+to\s+(.*?)\s+successful",
     r"Payment of\s+[\d,]+\s*RWF\s+to\s+(.*?)\s+(?:\(.*?\))?\s*successful",
     r"Payment of\s+[\d,]+\s*RWF\s+to\s+(.*?)\s+for\s+.*?\s+successful",
-    
     # Receipts (both M-Pesa & MoMo formats)
-    r"(?:Merchant|Counterparty|Recipient|Agent|Paid\s+to|Sent\s+to)\s*:\s*(.*)"
+    r"(?:Merchant|Counterparty|Recipient|Agent|Paid\s+to|Sent\s+to)\s*:\s*(.*)",
 ]
 
 
@@ -277,12 +281,12 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
 
     # 2. Extract Transaction ID (tx_id)
     tx_id = None
-    
+
     # Attempt 1: Explicit Receipt Labels
     tx_match = re.search(
         r"\b(?:Transaction\s*ID|TX\s*ID|TxID|Transaction\s*Ref)\s*[:\-]?\s*([A-Za-z0-9]+)\b",
         cleaned_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if tx_match:
         tx_id = tx_match.group(1).strip()
@@ -314,23 +318,25 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
     amt_match = re.search(
         r"\b(?:Amount\s*Paid|Amount|Amt)\s*[:\-,]?\s*(?:Ksh|KSH)?\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)\b",
         cleaned_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if amt_match:
         amount = clean_amount(amt_match.group(1))
 
     fee_match = re.search(
-        r"\b(?:Service\s*Fee|Fee|Transaction\s*cost)\s*[:\-,]?\s*(?:Ksh|KSH)?\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)\b",
+        r"\b(?:Service\s*Fee|Fee|Transaction\s*cost)\s*[:\-,]?\s*(?:Ksh|KSH)?\s*"
+        r"(\d+(?:,\d{3})*(?:\.\d{1,2})?)\b",
         cleaned_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if fee_match:
         fee = clean_amount(fee_match.group(1))
 
     bal_match = re.search(
-        r"\b(?:Wallet\s*Balance|Remaining\s*Bal|Balance|Bal)\s*[:\-,]?\s*(?:Ksh|KSH)?\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)\b",
+        r"\b(?:Wallet\s*Balance|Remaining\s*Bal|Balance|Bal)\s*[:\-,]?\s*(?:Ksh|KSH)?\s*"
+        r"(\d+(?:,\d{3})*(?:\.\d{1,2})?)\b",
         cleaned_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if bal_match:
         balance = clean_amount(bal_match.group(1))
@@ -348,7 +354,7 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
             if fee is None and len(ksh_amounts) >= 3:
                 if "cost" in lower_text or "fee" in lower_text:
                     fee = clean_amount(ksh_amounts[2])
-                    
+
     elif provider == "MTN_MoMo":
         # Extract all RWF amounts
         rwf_matches = re.findall(r"\b([\d,]+)\s*RWF\b|\bRWF\s*([\d,]+)\b", cleaned_text, re.IGNORECASE)
@@ -358,19 +364,21 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
                 amount = clean_amount(rwf_amounts[0])
             # Parse Fee and Balance using contextual labels if not yet set
             if fee is None:
-                momo_fee = re.search(r"Fee\s*:\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s*RWF", cleaned_text, re.IGNORECASE)
+                momo_fee = re.search(
+                    r"Fee\s*:\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s*RWF", cleaned_text, re.IGNORECASE
+                )
                 if momo_fee:
                     fee = clean_amount(momo_fee.group(1))
             if balance is None:
-                momo_bal = re.search(r"Balance\s*:\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s*RWF", cleaned_text, re.IGNORECASE)
+                momo_bal = re.search(
+                    r"Balance\s*:\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s*RWF", cleaned_text, re.IGNORECASE
+                )
                 if momo_bal:
                     balance = clean_amount(momo_bal.group(1))
 
     # Default fee to 0.0 if not found
     if fee is None:
         fee = 0.0
-
-
 
     # 4. Extract Counterparty
     counterparty = None
@@ -379,7 +387,6 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
         if match:
             counterparty = match.group(1).strip()
             break
-
 
     # Clean up counterparty noise (dates, status terms)
     if counterparty:
@@ -402,14 +409,14 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
         "balance": balance,
         "counterparty": counterparty,
         "provider": provider,
-        "raw_text": text
+        "raw_text": text,
     }
 
 
 if __name__ == "__main__":
-    print("="*60)
+    print("=" * 60)
     print("      AKIBA AI: STEP 3 PIPELINE DEMONSTRATION")
-    print("="*60)
+    print("=" * 60)
 
     # 1. Generate sample thermal receipt images
     mpesa_img = Path("data/raw/sample_receipt_mpesa.png")
@@ -423,7 +430,7 @@ if __name__ == "__main__":
         amount=3750.50,
         fee=12.00,
         balance=12400.00,
-        counterparty="Mama Mboga Grocery"
+        counterparty="Mama Mboga Grocery",
     )
 
     print(f"Generating realistic MTN MoMo receipt image -> {momo_img}")
@@ -434,7 +441,7 @@ if __name__ == "__main__":
         amount=15000.00,
         fee=20.00,
         balance=74000.00,
-        counterparty="NYARUGENGE MARKET"
+        counterparty="NYARUGENGE MARKET",
     )
 
     # 2. Extract OCR text (trigger fallback stub automatically on this system)
@@ -464,17 +471,20 @@ if __name__ == "__main__":
             print(f"  {k:15}: {v}")
 
     # 4. Demonstrate parsing of raw provider SMS format strings
-    print("\n" + "-"*60)
+    print("\n" + "-" * 60)
     print("Demonstrating parsing of raw SMS templates...")
     sample_sms_logs = [
         # M-Pesa P2P Send
-        "UH13Q2B7N6 Confirmed. Ksh750.00 sent to HARUN MWANGI 0112259522 on 1/8/26 at 5:19 PM. New M-PESA balance is Ksh0.00. Transaction cost, Ksh12.00.",
+        "UH13Q2B7N6 Confirmed. Ksh750.00 sent to HARUN MWANGI 0112259522 on 1/8/26 at 5:19 PM. "
+        "New M-PESA balance is Ksh0.00. Transaction cost, Ksh12.00.",
         # M-Pesa P2P Receive
-        "UH13Q2B7N6 Confirmed. You have received Ksh2,500.00 from JOHN DOE 0712345678 on 2/8/26 at 1:15 PM. New M-PESA balance is Ksh15,400.00.",
+        "UH13Q2B7N6 Confirmed. You have received Ksh2,500.00 from JOHN DOE 0712345678 on 2/8/26 "
+        "at 1:15 PM. New M-PESA balance is Ksh15,400.00.",
         # MTN MoMo Cash Out
-        "TxID:31196215166 Cash Out of 5000 RWF from Agent Agent_888 at 2026-03-14 14:22:10 .Fee: 20RWF.Balance: 1500RWF.",
+        "TxID:31196215166 Cash Out of 5000 RWF from Agent Agent_888 at 2026-03-14 14:22:10 ."
+        "Fee: 20RWF.Balance: 1500RWF.",
         # MTN MoMo P2P Send
-        "*165*S*2500 RWF transferred to 25078123456 at 2026-03-14 14:22:10 .Fee: 10RWF.Balance: 12000RWF."
+        "*165*S*2500 RWF transferred to 25078123456 at 2026-03-14 14:22:10 .Fee: 10RWF.Balance: 12000RWF.",
     ]
 
     for sms in sample_sms_logs:
@@ -484,4 +494,4 @@ if __name__ == "__main__":
             if k != "raw_text":
                 print(f"  {k:15}: {v}")
 
-    print("="*60)
+    print("=" * 60)

@@ -1,7 +1,5 @@
 """Tests for SMS parser scaffolding."""
 
-import pytest
-
 from src.ingestion.sms_parser import parse_sms_message
 
 
@@ -52,4 +50,3 @@ Status: SUCCESSFUL
     assert res["balance"] == 14200.0
     assert res["counterparty"] == "NYARUGENGE MARKET"
     assert res["provider"] == "MTN_MoMo"
-
