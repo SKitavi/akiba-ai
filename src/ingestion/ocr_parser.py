@@ -2,7 +2,7 @@
 
 This module implements Step 3 of the Akiba AI ingestion pipeline:
 1. Generating mock thermal receipts for GUI and system testing.
-2. OCR text extraction with a binary-free/air-gapped graceful fallback.
+2. OCR text extraction with explicit errors for normal application ingestion.
 3. Regex-based parsing for raw SMS messages and structured receipts.
 
 Author: Senior Python Data Engineer
@@ -169,7 +169,7 @@ def generate_sample_receipt_image(
 
 
 def get_mock_receipt_text(provider: str = "M-Pesa") -> str:
-    """Returns a realistic mock receipt text string for tests and fallbacks."""
+    """Return synthetic receipt text for explicitly requested tests and demos."""
     if provider == "MTN_MoMo":
         return """
 AKIBA SACCO AGENT
@@ -223,6 +223,8 @@ def extract_text_from_image(
 
     Args:
         image_path: Path to the receipt image file.
+        allow_mock_fallback: Permit synthetic receipt text for an explicit test
+                             or demo pathway. Keep disabled for real ingestion.
 
     Returns:
         Extracted OCR text, or synthetic mock text only when explicitly allowed.
@@ -232,7 +234,7 @@ def extract_text_from_image(
     """
     path_str = str(image_path).lower()
 
-    # Inferred provider based on filename for targeted fallback stubbing
+    # Infer a provider only for the explicitly enabled synthetic fallback.
     provider = "M-Pesa"
     if "momo" in path_str or "mtn" in path_str:
         provider = "MTN_MoMo"
@@ -244,7 +246,7 @@ def extract_text_from_image(
             if isinstance(extracted, str) and extracted.strip():
                 return extracted
         except Exception:
-            # Catching TesseractNotFoundError, OSErrors, and other failures gracefully
+            # Convert OCR/library failures into the stable error contract below.
             pass
 
     if allow_mock_fallback:
@@ -562,15 +564,15 @@ if __name__ == "__main__":
         counterparty="NYARUGENGE MARKET",
     )
 
-    # 2. Extract OCR text (trigger fallback stub automatically on this system)
-    print("\nExtracting OCR text (with Graceful Fallback check)...")
-    mpesa_extracted_text = extract_text_from_image(mpesa_img)
-    momo_extracted_text = extract_text_from_image(momo_img)
+    # 2. This explicit demo permits synthetic text if real OCR is unavailable.
+    print("\nExtracting OCR text (explicit demo fallback enabled)...")
+    mpesa_extracted_text = extract_text_from_image(mpesa_img, allow_mock_fallback=True)
+    momo_extracted_text = extract_text_from_image(momo_img, allow_mock_fallback=True)
 
-    print("\n--- Extracted M-Pesa Text (Stubbed/OCR): ---")
+    print("\n--- Extracted M-Pesa Text (OCR or explicit demo fallback): ---")
     print(mpesa_extracted_text.strip())
 
-    print("\n--- Extracted MTN MoMo Text (Stubbed/OCR): ---")
+    print("\n--- Extracted MTN MoMo Text (OCR or explicit demo fallback): ---")
     print(momo_extracted_text.strip())
 
     # 3. Parse receipt texts into structured outputs
