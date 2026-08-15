@@ -25,10 +25,17 @@ from src.ingestion.sms_parser import parse_sms_message
 from src.application.assessment import AssessmentResult, assess_applicant
 from src.model.loader import ModelBundle, load_model_bundle, resolve_model_path
 from src.storage.assessment_store import (
+    AssessmentAuditContext,
     HumanDecision,
     PersistedAssessment,
     persist_assessment,
     record_human_decision,
+)
+from src.storage.analytics import (
+    AssessmentAnalytics,
+    AssessmentHistoryItem,
+    get_assessment_analytics,
+    list_assessment_history,
 )
 from src.storage.db import get_connection, initialize_schema
 from src.xai.narratives import generate_risk_narrative
@@ -174,17 +181,31 @@ def localize_assessment(
     return replace(assessment, narrative=narrative)
 
 
-def save_assessment(assessment: AssessmentResult) -> PersistedAssessment:
+def save_assessment(
+    assessment: AssessmentResult,
+    *,
+    source_key: str | None = None,
+    normalization: NormalizationResult | None = None,
+) -> PersistedAssessment:
     """Initialize local storage and persist one assessment atomically."""
+    audit_context = AssessmentAuditContext(
+        source_key=source_key,
+        processed_count=(normalization.processed_count if normalization else None),
+        valid_count=(normalization.valid_count if normalization else None),
+        rejected_count=(normalization.rejected_count if normalization else None),
+        warning_count=(len(normalization.warnings) if normalization else None),
+    )
     with closing(get_connection()) as connection:
         initialize_schema(connection, _SCHEMA_PATH)
-        return persist_assessment(connection, assessment)
+        return persist_assessment(connection, assessment, audit_context)
 
 
 def save_human_decision(
     applicant_id: str,
     decision: HumanDecision | str,
     rationale: str | None,
+    *,
+    assessment_id: int | None = None,
 ) -> int:
     """Persist an officer's decision through the backend decision boundary."""
     with closing(get_connection()) as connection:
@@ -194,4 +215,27 @@ def save_human_decision(
             applicant_id,
             decision,
             rationale,
+            assessment_id=assessment_id,
+        )
+
+
+def load_assessment_analytics() -> AssessmentAnalytics:
+    """Load persisted operational analytics through the backend read contract."""
+    with closing(get_connection()) as connection:
+        initialize_schema(connection, _SCHEMA_PATH)
+        return get_assessment_analytics(connection)
+
+
+def load_assessment_history(
+    *,
+    limit: int = 100,
+    applicant_query: str | None = None,
+) -> tuple[AssessmentHistoryItem, ...]:
+    """Load persisted assessment history through the backend read contract."""
+    with closing(get_connection()) as connection:
+        initialize_schema(connection, _SCHEMA_PATH)
+        return list_assessment_history(
+            connection,
+            limit=limit,
+            applicant_query=applicant_query,
         )

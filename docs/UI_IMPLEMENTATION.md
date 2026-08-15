@@ -111,7 +111,8 @@ changes between environments.
 - `decision_value`, `decision_rationale`, `decision_saved`, and `decision_id`
   keep the human action separate and prevent rerun writes.
 - `last_error` provides recoverable workflow feedback.
-- `session_history` contains only assessments saved during the browser session.
+- `session_history` retains immediate browser-session feedback for the active
+  workflow; Overview and History use the durable backend read API instead.
 
 Widget keys are also centralized so starting another assessment clears stale
 form values without deleting session history.
@@ -157,7 +158,7 @@ Recording requires an explicit action and supports an officer rationale.
 - Zero valid evidence: blocked progression.
 - Assessment failure: validated evidence remains available for retry.
 - Database failure: user-facing failure with optional technical details.
-- Empty overview/history: no fake analytics or persisted-history query.
+- Empty overview/history: explicit empty states backed by persisted queries.
 - Long operations: specific validating, scoring, and saving messages.
 
 ## Accessibility and responsiveness
@@ -174,13 +175,15 @@ columns stack at narrower widths and tables retain horizontal overflow.
 It covers application load, navigation, demo validation, zero-valid blocking,
 missing-model guidance, model score and version, directional explanations,
 English/Kiswahili switching, unselected decisions, explicit confirmation,
-database writes, and rerun idempotency. Adapter tests cover empty CSV and SMS
-input. The complete backend suite remains the regression boundary.
+database writes, assessment-to-decision linkage, ingestion audit metadata, and
+rerun idempotency. Adapter tests cover empty CSV and SMS input. Storage analytics
+tests cover aggregates, history, filtering, and empty databases. The complete
+backend suite remains the regression boundary.
 
 ## Known limitations
 
-- The frozen backend exposes no supported read API for saved assessments, so the
-  History page intentionally shows current-session records only.
+- Analytics include linked assessment runs created after this schema addition;
+  legacy standalone rows are intentionally not inferred or backfilled.
 - Authentication, authorization, encryption, audit identity, migrations, consent,
   and production governance are outside this synthetic MVP.
 - Receipt quality and local Tesseract installation determine OCR success.

@@ -24,6 +24,7 @@ streamlit run src/ui/app.py
 - Offline SMS/receipt ingestion stubs
 - Feature engineering stubs for risk scoring
 - Local SQLite storage and model pipeline scaffolding
+- Persisted assessment history and operational analytics
 - Explainable English/Kiswahili assessments and a complete Streamlit officer workflow
 
 ### Out of Scope (Stretch Goals)

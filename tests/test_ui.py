@@ -78,7 +78,7 @@ def test_application_loads_and_default_navigation_works() -> None:
 
     _button(app, "History").click().run()
     assert not app.exception
-    assert _has_markdown(app, "No session history")
+    assert _has_markdown(app, "No persisted history")
 
 
 def test_demo_validation_reaches_financial_summary() -> None:
@@ -167,9 +167,16 @@ def test_complete_assessment_language_and_persistence_workflow(
     with sqlite3.connect(database_path) as connection:
         counts = [
             connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-            for table in ("features", "scores", "explanations", "decisions")
+            for table in (
+                "features",
+                "scores",
+                "explanations",
+                "decisions",
+                "assessment_runs",
+                "assessment_decision_links",
+            )
         ]
-    assert counts == [1, 1, 1, 0]
+    assert counts == [1, 1, 1, 0, 1, 0]
 
     next(radio for radio in app.radio if radio.label == "Decision").set_value(
         "REVIEW"
@@ -183,9 +190,24 @@ def test_complete_assessment_language_and_persistence_workflow(
     with sqlite3.connect(database_path) as connection:
         counts = [
             connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-            for table in ("features", "scores", "explanations", "decisions")
+            for table in (
+                "features",
+                "scores",
+                "explanations",
+                "decisions",
+                "assessment_runs",
+                "assessment_decision_links",
+            )
         ]
-    assert counts == [1, 1, 1, 1]
+        audit = connection.execute(
+            """
+            SELECT source_key, processed_count, valid_count, rejected_count
+            FROM assessment_runs
+            """
+        ).fetchone()
+    assert counts == [1, 1, 1, 1, 1, 1]
+    assert audit[0] == "demo"
+    assert audit[1] == audit[2] + audit[3]
     assert app.session_state["decision_saved"] is True
     assert app.session_state["session_history"][0]["decision"] == "Review"
 

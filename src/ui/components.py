@@ -173,6 +173,23 @@ def render_validation_counters(
     )
 
 
+def render_summary_counters(rows: tuple[tuple[str, int], ...]) -> None:
+    """Render four labeled operational totals in the shared summary strip."""
+    if len(rows) != 4:
+        raise ValueError("A summary strip requires exactly four counters.")
+    counters = "".join(
+        '<div class="ak-counter neutral">'
+        f'<span class="ak-counter-label">{escape(label)}</span>'
+        f"<strong>{value:,}</strong>"
+        "</div>"
+        for label, value in rows
+    )
+    st.markdown(
+        f'<div class="ak-validation-summary">{counters}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def render_metric_rows(rows: tuple[tuple[str, str], ...]) -> None:
     """Render compact label/value rows for financial behaviour."""
     body = "".join(

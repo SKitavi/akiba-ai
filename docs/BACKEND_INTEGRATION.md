@@ -415,6 +415,8 @@ The SQLite schema contains:
 - `scores`
 - `explanations`
 - `decisions`
+- `assessment_runs`
+- `assessment_decision_links`
 
 The new `explanations` table stores:
 
@@ -435,7 +437,7 @@ with get_connection("akiba_ai.db") as connection:
     stored = persist_assessment(connection, result)
 ```
 
-If any required insert fails, all earlier inserts in that assessment are rolled back. The function returns the three inserted row IDs only after the transaction succeeds.
+If any required insert fails, all earlier inserts in that assessment are rolled back. The function returns the feature, score, explanation, and assessment-run IDs only after the transaction succeeds. An optional `AssessmentAuditContext` records the evidence source and normalization counts without changing the model result.
 
 ### Human decision boundary
 
@@ -447,6 +449,7 @@ record_human_decision(
     applicant_id=result.applicant_id,
     decision=HumanDecision.REVIEW,
     rationale="Supporting documents requested.",
+    assessment_id=stored.assessment_id,
 )
 ```
 
@@ -457,6 +460,17 @@ Controlled values are:
 - `DECLINE`
 
 These are storage values for a human-selected decision. The backend never maps a risk score to one of them.
+
+When `assessment_id` is supplied, the decision is transactionally linked to the exact assessment reviewed. The backend rejects mismatched applicants and a second decision for the same assessment. Calls without `assessment_id` remain supported for compatibility, but those decisions cannot appear in assessment-level analytics.
+
+### Analytics read contract
+
+`src.storage.analytics` exposes typed, Streamlit-independent queries:
+
+- `get_assessment_analytics()` returns assessment totals, decision follow-through, evidence-source counts, ingestion-quality totals, and fixed-width score distribution counts.
+- `list_assessment_history()` returns newest assessment runs with their optional linked decisions and supports bounded applicant-ID filtering.
+
+Only records created through `assessment_runs` are included. Legacy standalone feature, score, explanation, or decision rows are not guessed together.
 
 ## 9. Error contract
 
@@ -616,12 +630,12 @@ The implementation preserves these boundaries:
 - `.env` files are not parsed automatically; environment variables are supported.
 - Legacy models without metadata expose version `unknown`.
 - The SQLite database is not encrypted.
-- The schema has no foreign keys, applicant master table, migrations, authentication, consent records, or retention controls.
+- The schema uses additive idempotent DDL rather than a versioned migration framework; it still lacks an applicant master table, authentication, consent records, and retention controls.
 - Model caching is left to the application/UI boundary.
-- The Streamlit shell does not yet invoke these services.
+- Historical standalone rows created before assessment linkage cannot be reconstructed reliably and are excluded from analytics.
 - Real-world calibration, fairness, drift, and outcome validation are not implemented.
 
-## 14. Future Streamlit integration
+## 14. Streamlit integration
 
 The Streamlit phase can rely on the backend to:
 
@@ -630,6 +644,7 @@ The Streamlit phase can rely on the backend to:
 3. Return the complete applicant assessment.
 4. Persist assessment output atomically.
 5. Record a separate human-selected decision.
+6. Read persisted history and operational analytics without UI-owned SQL.
 
 The UI should be limited to:
 

@@ -481,7 +481,11 @@ def _session_history_record(result: object, score_id: int) -> dict[str, object]:
 def _persist_current_assessment() -> None:
     if st.session_state.assessment_saved:
         return
-    persisted = save_assessment(st.session_state.assessment_result)
+    persisted = save_assessment(
+        st.session_state.assessment_result,
+        source_key=str(st.session_state.source_key),
+        normalization=st.session_state.normalization_result,
+    )
     st.session_state.persisted_assessment = persisted
     st.session_state.assessment_saved = True
     history = list(st.session_state.session_history)
@@ -608,7 +612,10 @@ def _record_current_decision() -> None:
         raise UIInputError("Select an officer decision before recording it.")
     rationale = st.session_state.decision_rationale.strip()
     decision_id = save_human_decision(
-        str(st.session_state.applicant_id), decision, rationale
+        str(st.session_state.applicant_id),
+        decision,
+        rationale,
+        assessment_id=st.session_state.persisted_assessment.assessment_id,
     )
     st.session_state.decision_id = decision_id
     st.session_state.decision_saved = True
