@@ -41,6 +41,17 @@ ASSESSMENT_STATE_KEYS: Final[tuple[str, ...]] = (
     "last_error",
 )
 
+ASSESSMENT_WIDGET_KEYS: Final[tuple[str, ...]] = (
+    "applicant_mode_widget",
+    "demo_applicant_widget",
+    "custom_applicant_widget",
+    "source_widget",
+    "csv_upload_widget",
+    "sms_input_widget",
+    "receipt_upload_widget",
+    "receipt_type_widget",
+)
+
 _DEFAULTS: Final[dict[str, object]] = {
     "route": Route.OVERVIEW.value,
     "assessment_step": 0,
@@ -80,4 +91,6 @@ def reset_assessment() -> None:
     for key in ASSESSMENT_STATE_KEYS:
         default = _DEFAULTS[key]
         st.session_state[key] = default.copy() if isinstance(default, list) else default
+    for key in ASSESSMENT_WIDGET_KEYS:
+        st.session_state.pop(key, None)
     navigate(Route.ASSESSMENT)

@@ -105,3 +105,81 @@ def render_panel_heading(title: str, meta: str | None = None) -> None:
         "</div>",
         unsafe_allow_html=True,
     )
+
+
+def render_step_bar(current_step: int) -> None:
+    """Render the compact assessment progress indicator."""
+    labels = ("Applicant", "Transactions", "Validation", "Assessment", "Decision")
+    items = []
+    for index, label in enumerate(labels):
+        if index < current_step:
+            state_class = "complete"
+            marker = "✓"
+        elif index == current_step:
+            state_class = "current"
+            marker = str(index + 1)
+        else:
+            state_class = "upcoming"
+            marker = str(index + 1)
+        items.append(
+            f'<span class="ak-step {state_class}"><b>{marker}</b>{escape(label)}</span>'
+        )
+    st.markdown(
+        '<nav class="ak-step-bar" aria-label="Assessment progress">'
+        + '<span class="ak-step-separator">/</span>'.join(items)
+        + "</nav>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_failure_panel(
+    title: str, message: str, technical: str | None = None
+) -> None:
+    """Render a calm failure state with optional developer detail."""
+    st.markdown(
+        '<div class="ak-failure-panel">'
+        '<div class="ak-overline">Action needed</div>'
+        f'<div class="ak-failure-title">{escape(title)}</div>'
+        f'<div class="ak-failure-copy">{escape(message)}</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    if technical:
+        with st.expander("View technical details"):
+            st.code(technical)
+
+
+def render_validation_counters(
+    processed: int,
+    valid: int,
+    rejected: int,
+    warnings: int,
+) -> None:
+    """Render validation counts with words as well as restrained colour."""
+    values = (
+        ("Processed", processed, "neutral"),
+        ("Valid", valid, "valid"),
+        ("Rejected", rejected, "attention" if rejected else "neutral"),
+        ("Warnings", warnings, "attention" if warnings else "neutral"),
+    )
+    columns = st.columns(4, gap="small")
+    for column, (label, value, tone) in zip(columns, values):
+        with column:
+            st.markdown(
+                f'<div class="ak-counter {tone}">'
+                f'<span class="ak-counter-label">{label}</span>'
+                f"<strong>{value:,}</strong>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+
+def render_metric_rows(rows: tuple[tuple[str, str], ...]) -> None:
+    """Render compact label/value rows for financial behaviour."""
+    body = "".join(
+        '<div class="ak-metric-row">'
+        f"<span>{escape(label)}</span><strong>{escape(value)}</strong>"
+        "</div>"
+        for label, value in rows
+    )
+    st.markdown(f'<div class="ak-metric-list">{body}</div>', unsafe_allow_html=True)

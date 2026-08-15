@@ -94,6 +94,46 @@ body,
   margin: 0.15rem -1rem 1rem;
 }
 
+.ak-step-bar {
+  align-items: center;
+  background: var(--ak-subtle);
+  border: 1px solid var(--ak-border);
+  border-radius: var(--ak-radius-md);
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  min-height: 38px;
+  overflow-x: auto;
+  padding: 0.35rem 0.75rem;
+  white-space: nowrap;
+}
+
+.ak-step {
+  align-items: center;
+  color: var(--ak-muted);
+  display: inline-flex;
+  font-size: 0.72rem;
+  gap: 0.35rem;
+}
+
+.ak-step b {
+  font-family: "Roboto Mono", Consolas, monospace;
+  font-size: 0.67rem;
+}
+
+.ak-step.current {
+  color: var(--ak-navy-800);
+  font-weight: 650;
+}
+
+.ak-step.complete {
+  color: var(--ak-valid);
+}
+
+.ak-step-separator {
+  color: #b4bfc9;
+}
+
 .ak-page-header {
   margin: 0.4rem 0 1.1rem;
   max-width: 62rem;
@@ -158,6 +198,83 @@ body,
   font-size: 0.78rem;
   line-height: 1.55;
   margin-top: 0.25rem;
+}
+
+.ak-failure-panel {
+  background: var(--ak-surface);
+  border: 1px solid var(--ak-border);
+  border-radius: var(--ak-radius-md);
+  border-top: 3px solid var(--ak-failure);
+  padding: 0.9rem 1rem;
+}
+
+.ak-failure-title {
+  font-size: 0.88rem;
+  font-weight: 650;
+  margin-top: 0.25rem;
+}
+
+.ak-failure-copy {
+  color: #4a5a68;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  margin-top: 0.2rem;
+}
+
+.ak-counter {
+  background: var(--ak-surface);
+  border: 1px solid var(--ak-border);
+  border-radius: var(--ak-radius-md);
+  min-height: 76px;
+  padding: 0.75rem 0.85rem;
+}
+
+.ak-counter.valid {
+  border-top: 3px solid var(--ak-valid);
+}
+
+.ak-counter.attention {
+  border-top: 3px solid var(--ak-attention);
+}
+
+.ak-counter-label {
+  color: var(--ak-muted);
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.ak-counter strong {
+  color: var(--ak-ink-900);
+  display: block;
+  font-family: "Roboto Mono", Consolas, monospace;
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+.ak-metric-row {
+  align-items: baseline;
+  border-bottom: 1px solid var(--ak-rule);
+  display: flex;
+  font-size: 0.76rem;
+  justify-content: space-between;
+  padding: 0.48rem 0;
+}
+
+.ak-metric-row:last-child {
+  border-bottom: 0;
+}
+
+.ak-metric-row span {
+  color: #4a5a68;
+}
+
+.ak-metric-row strong {
+  font-family: "Roboto Mono", Consolas, monospace;
+  font-size: 0.73rem;
+  font-weight: 500;
 }
 
 [data-testid="stButton"] button,
