@@ -8,15 +8,30 @@ Sprint day due: Day 3 (Aug 12) - parsing/features/storage milestone.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
 
-def get_connection(db_path: Path) -> sqlite3.Connection:
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_DB_PATH = PROJECT_ROOT / "akiba_ai.db"
+
+
+def resolve_db_path(db_path: Path | str | None = None) -> Path:
+    """Resolve database path by explicit argument, environment, then default."""
+    if db_path is not None:
+        return Path(db_path).expanduser()
+    configured_path = os.environ.get("DB_PATH")
+    if configured_path:
+        return Path(configured_path).expanduser()
+    return DEFAULT_DB_PATH
+
+
+def get_connection(db_path: Path | str | None = None) -> sqlite3.Connection:
     """Return a SQLite connection for local offline storage."""
-    return sqlite3.connect(db_path)
+    return sqlite3.connect(resolve_db_path(db_path))
 
 
 def initialize_schema(connection: sqlite3.Connection, schema_path: Path) -> None:
@@ -45,11 +60,14 @@ def initialize_schema(connection: sqlite3.Connection, schema_path: Path) -> None
 # Feature persistence helpers
 # ---------------------------------------------------------------------------
 
+
 def save_features(
     connection: sqlite3.Connection,
     applicant_id: str,
     feature_dict: dict[str, Any],
-) -> None:
+    *,
+    commit: bool = True,
+) -> int:
     """Persist a feature payload for one applicant as a JSON blob.
 
     Args:
@@ -60,11 +78,13 @@ def save_features(
     """
     payload = json.dumps(feature_dict, default=float)
     created_at = datetime.now(timezone.utc).isoformat()
-    connection.execute(
+    cursor = connection.execute(
         "INSERT INTO features (applicant_id, feature_payload, created_at) VALUES (?, ?, ?)",
         (applicant_id, payload, created_at),
     )
-    connection.commit()
+    if commit:
+        connection.commit()
+    return int(cursor.lastrowid)
 
 
 def save_score(
@@ -72,21 +92,62 @@ def save_score(
     applicant_id: str,
     risk_score: float,
     model_version: str,
-) -> None:
+    *,
+    commit: bool = True,
+) -> int:
     """Persist a risk score for one applicant.
 
     Args:
         connection:    Open SQLite connection with the schema already initialised.
         applicant_id:  Applicant identifier string.
-        risk_score:    Calibrated probability of default in ``[0, 1]``.
+        risk_score:    XGBoost model risk score in ``[0, 1]``.
         model_version: Model version tag (e.g. ``'xgb_v1'``).
     """
     created_at = datetime.now(timezone.utc).isoformat()
-    connection.execute(
+    cursor = connection.execute(
         "INSERT INTO scores (applicant_id, risk_score, model_version, created_at) VALUES (?, ?, ?, ?)",
         (applicant_id, risk_score, model_version, created_at),
     )
-    connection.commit()
+    if commit:
+        connection.commit()
+    return int(cursor.lastrowid)
+
+
+def save_explanation(
+    connection: sqlite3.Connection,
+    applicant_id: str,
+    model_version: str,
+    explanation_dict: dict[str, Any],
+    narrative_language: str,
+    narrative_dict: dict[str, Any],
+    *,
+    commit: bool = True,
+) -> int:
+    """Persist structured SHAP and localized narrative payloads."""
+    created_at = datetime.now(timezone.utc).isoformat()
+    cursor = connection.execute(
+        """
+        INSERT INTO explanations (
+            applicant_id,
+            model_version,
+            explanation_payload,
+            narrative_language,
+            narrative_payload,
+            created_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            applicant_id,
+            model_version,
+            json.dumps(explanation_dict, default=float),
+            narrative_language,
+            json.dumps(narrative_dict, default=float),
+            created_at,
+        ),
+    )
+    if commit:
+        connection.commit()
+    return int(cursor.lastrowid)
 
 
 def save_decision(
@@ -94,7 +155,9 @@ def save_decision(
     applicant_id: str,
     decision_label: str,
     rationale: Optional[str] = None,
-) -> None:
+    *,
+    commit: bool = True,
+) -> int:
     """Persist a credit decision for one applicant.
 
     Args:
@@ -105,8 +168,10 @@ def save_decision(
         rationale:      Optional free-text explanation (e.g. top SHAP driver).
     """
     created_at = datetime.now(timezone.utc).isoformat()
-    connection.execute(
+    cursor = connection.execute(
         "INSERT INTO decisions (applicant_id, decision_label, rationale, created_at) VALUES (?, ?, ?, ?)",
         (applicant_id, decision_label, rationale, created_at),
     )
-    connection.commit()
+    if commit:
+        connection.commit()
+    return int(cursor.lastrowid)

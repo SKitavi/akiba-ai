@@ -17,6 +17,16 @@ CREATE TABLE IF NOT EXISTS scores (
     created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS explanations (
+    explanation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    applicant_id TEXT NOT NULL,
+    model_version TEXT NOT NULL,
+    explanation_payload TEXT NOT NULL,
+    narrative_language TEXT NOT NULL,
+    narrative_payload TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS decisions (
     decision_id INTEGER PRIMARY KEY AUTOINCREMENT,
     applicant_id TEXT NOT NULL,
