@@ -25,7 +25,7 @@ reports/*
 data/raw/*
 !data/raw/.gitkeep
 
-# Trained model artifacts (tracked via .meta.json + .eval.json only)
+# Generated model artifacts and metadata (kept local)
 models/*.json
 models/*.bin
 models/*.ubj

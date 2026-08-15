@@ -6,6 +6,8 @@ AkibaAI is an **offline-first credit risk scoring simulation** for African SACCO
 
 ```bash
 python -m venv .venv
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+# Linux/macOS:
 source .venv/bin/activate
 pip install -r requirements.txt
 streamlit run src/ui/app.py
