@@ -16,7 +16,7 @@ The project currently provides a working backend pipeline for:
 - Scoring new applicant feature rows
 - Persisting features, scores, and decisions in SQLite
 
-The SHAP explainability and English/Kiswahili narrative layers are implemented as reusable backend modules. The Streamlit user interface remains a placeholder. This is an MVP simulation, not a production lending platform, and it uses no real customer data.
+The SHAP explainability and English/Kiswahili narrative layers are implemented as reusable backend modules. The Streamlit application now provides the complete synthetic officer workflow from evidence validation through a separately recorded human decision. This is an MVP simulation, not a production lending platform, and it uses no real customer data.
 
 ## 2. The problem the project is exploring
 
@@ -67,7 +67,7 @@ Synthetic M-Pesa / MTN MoMo transactions and SMS messages
                                             |
                                             v
                                     Streamlit dashboard
-                                      (unfinished)
+                                      (implemented)
 ```
 
 Structured synthetic records and supported M-Pesa/MTN SMS formats now pass through a typed normalization boundary before feature engineering. Records missing required financial fields are rejected with structured reasons rather than receiving fabricated values. Generic OCR receipts may still require explicit caller-supplied transaction context.
@@ -99,7 +99,7 @@ akiba-ai/
 |   |-- eval/                         Classification metrics
 |   |-- storage/                      SQLite schema and persistence helpers
 |   |-- xai/                          SHAP and localized narratives
-|   `-- ui/                           Streamlit placeholder
+|   `-- ui/                           Modular Streamlit officer workstation
 `-- tests/                            Automated unit tests
 ```
 
@@ -174,7 +174,7 @@ These JSON artifacts are ignored by the current `.gitignore` rules.
 python -m streamlit run src/ui/app.py
 ```
 
-The current dashboard only renders the application title and a TODO notice. It does not yet load a model, ingest transactions, calculate scores, or display explanations.
+The dashboard provides Overview, New Assessment, and current-session History views. Train the default local model first. The UI then supports synthetic, CSV, SMS, and receipt evidence; canonical validation; financial review; cached model scoring; SHAP narratives; local assessment persistence; and a separate officer decision. See `docs/UI_IMPLEMENTATION.md`.
 
 ### Run tests
 
@@ -439,25 +439,17 @@ Positive contributions move this model toward greater estimated risk, while nega
 
 ## 16. Streamlit dashboard
 
-`src/ui/app.py` is currently a shell. The backend is no longer expected to live inside Streamlit. Future UI code can normalize input, load one reusable `ModelBundle`, call `assess_applicant()`, render its typed result, and call the storage adapter.
+`src/ui/app.py` configures a compact task shell and dispatches Overview, New Assessment, and History views. `src/ui/state.py` owns the session contract, `src/ui/services.py` adapts frozen backend APIs, `src/ui/components.py` contains reusable display primitives, and `src/ui/theme.css` centralizes the Console visual system.
 
-A useful MVP dashboard would still need:
+The New Assessment view guides an officer through applicant selection, synthetic/CSV/SMS/receipt evidence, canonical validation, financial feature review, model scoring, localized explanation, assessment saving, and a separately confirmed human decision. Model loading uses `st.cache_resource`, but scoring and persistence remain explicit operations. Rerun guard flags prevent duplicate database writes.
 
-- Applicant selection or creation
-- CSV/SMS/receipt ingestion
-- Parsing and validation feedback
-- Feature summary
-- Model artifact/version selection
-- Risk score display without invented policy bands
-- Top positive and negative explanation factors
-- English/Kiswahili narrative selection
-- Human approve/review/decline action
-- SQLite persistence and audit history
-- Explicit synthetic-data and non-production warnings
+The Model Risk Score uses a neutral 0–1 scale. There are no invented risk bands or lending thresholds. Increasing and reducing factors retain backend ranking, English/Kiswahili text comes from the narrative backend, and the officer decision starts unselected.
+
+Because the frozen backend has no historical read API, the History view honestly displays only records saved in the current browser session. See `docs/UI_IMPLEMENTATION.md` for the full architecture, state contract, visual tokens, and limitations.
 
 ## 17. Automated tests
 
-The repository currently has 137 passing tests covering:
+The repository currently has 143 passing tests covering:
 
 - `test_data_generation.py`: phone/ID formats, dataset schema, repeatability, default rate
 - `test_sms_parser.py`: M-Pesa, MTN MoMo, and receipt parsing
@@ -469,6 +461,7 @@ The repository currently has 137 passing tests covering:
 - `test_assessment_service.py`: typed English/Kiswahili assessment orchestration and errors
 - `test_assessment_store.py`: atomic persistence, rollback, explanation payloads, human decisions
 - `test_backend_integration.py`: complete synthetic backend golden path
+- `test_ui.py`: navigation, validation, model/error states, localization, persistence, and rerun safety
 - XAI/narrative tests: SHAP semantics, ranking, localization, and integration
 
 The full suite passes under the repository's Python 3.10 virtual environment. The remaining warnings are third-party matplotlib/Pyparsing deprecation warnings.
@@ -477,7 +470,6 @@ There are currently no tests for:
 
 - The training orchestrator as a complete command
 - Evaluation edge cases such as empty inputs
-- Streamlit interactions
 - Database migrations and concurrency
 
 ## 18. The most important modeling limitation: synthetic target leakage
@@ -522,7 +514,7 @@ For meaningful validation, the model would need consented historical data with o
 
 ### Engineering gaps
 
-- The Streamlit shell does not yet call the integrated backend services.
+- Persisted-history retrieval is unavailable because the frozen backend exposes no supported read API; the UI uses current-session history.
 - Generic OCR receipts may omit transaction type and therefore require explicit context.
 - Configuration reads environment variables but does not parse `.env` files automatically.
 - There is no model registry, caching policy, or database migration framework.
@@ -537,28 +529,26 @@ For meaningful validation, the model would need consented historical data with o
 3. Run the training command and record the resulting metrics.
 4. Resolve remaining legacy repository-wide formatting and lint findings separately.
 
-### Phase 2: Close the ingestion gap
+### Phase 2: Extend ingestion coverage if policy requires it
 
 1. Add confidence metadata if OCR/SMS acceptance policy later requires it.
 2. Extend only explicitly supported provider message formats.
-3. Add UI feedback for valid, rejected, and warning counts.
-4. Obtain caller context for receipts that omit transaction type.
+3. Define any additional provider-specific acceptance rules before extending formats.
+4. Continue collecting explicit caller context for receipts that omit transaction type.
 
-### Phase 3: Implement scoring and explanations
+### Phase 3: Govern scoring and explanations
 
-1. Integrate `load_model_bundle()` and `assess_applicant()` into the UI.
-2. Cache the loaded bundle at the UI boundary if needed.
+1. Validate the integrated UI workflow with intended SACCO stakeholders.
+2. Define model artifact promotion and rollback practices.
 3. Define score bands and thresholds only when an explicit SACCO policy exists.
 4. Continue labeling raw model outputs as risk scores unless calibration is implemented.
 
-### Phase 4: Build the integrated dashboard
+### Phase 4: Extend the integrated dashboard only through supported APIs
 
-1. Add ingestion and applicant-selection pages.
-2. Connect feature building and prediction.
-3. Show transparent model and data validation errors.
-4. Display explanations and allow human decisions.
-5. Persist the complete audit trail in SQLite.
-6. Add Streamlit and end-to-end UI tests.
+1. Add a supported backend history/read contract.
+2. Add authenticated officer identity and authorization.
+3. Add audit, consent, retention, and migration policies.
+4. Preserve the current separation between model output and human judgment.
 
 ### Phase 5: Prepare for any real pilot
 
@@ -608,10 +598,10 @@ The MVP can be considered integrated when:
 | Database schema | `src/storage/schema.sql` |
 | Explain one score | `src/xai/shap_explainer.py` |
 | Generate localized narrative | `src/xai/narratives.py` |
-| Dashboard TODO | `src/ui/app.py` |
+| Dashboard architecture | `docs/UI_IMPLEMENTATION.md` |
 
 ## 23. Final perspective
 
-AkibaAI now has an integrated, Streamlit-independent educational backend: canonical normalization, feature engineering, validated model loading, scoring, SHAP, localized narratives, typed assessment results, atomic persistence, and separate human decisions. The most important unfinished work is a usable dashboard plus the governance, security, real-data validation, and operating controls required beyond an academic MVP.
+AkibaAI now has an integrated educational backend and a professional Streamlit consumer: canonical normalization, feature engineering, validated model loading, scoring, SHAP, localized narratives, typed assessment results, atomic persistence, and separate human decisions. The most important unfinished work is the governance, security, persisted-history API, real-data validation, and operating controls required beyond an academic MVP.
 
 Treat the current model as a software-pipeline demonstration. The synthetic evaluation cannot support real credit decisions, and the code needs substantial validation, governance, privacy, security, fairness, and operational work before any real-data pilot.
