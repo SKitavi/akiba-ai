@@ -82,6 +82,16 @@ body,
   padding: 1.4rem 1.1rem 1.25rem;
 }
 
+[data-testid="stSidebarUserContent"] [data-testid="stVerticalBlock"] {
+  gap: 0.35rem;
+}
+
+[data-testid="stSidebarUserContent"]
+  [data-testid="stVerticalBlock"]
+  > [data-testid="stElementContainer"]:has(.ak-sb-status) {
+  margin-top: 0.75rem;
+}
+
 [data-testid="stSidebarCollapseButton"] svg,
 [data-testid="collapsedControl"] svg {
   color: #e2e8f0 !important;
@@ -142,7 +152,7 @@ body,
   font-size: 0.85rem;
   font-weight: 500;
   justify-content: flex-start;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0;
   padding: 0.5rem 0.65rem;
   text-align: left;
   width: 100%;
