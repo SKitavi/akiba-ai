@@ -88,6 +88,12 @@ body,
 
 [data-testid="stSidebarUserContent"]
   [data-testid="stVerticalBlock"]
+  > [data-testid="stElementContainer"]:has(.ak-sb-nav-label) {
+  margin-bottom: 0.45rem;
+}
+
+[data-testid="stSidebarUserContent"]
+  [data-testid="stVerticalBlock"]
   > [data-testid="stElementContainer"]:has(.ak-sb-status) {
   margin-top: 0.75rem;
 }
