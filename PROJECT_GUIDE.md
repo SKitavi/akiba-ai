@@ -440,7 +440,7 @@ Positive contributions move this model toward greater estimated risk, while nega
 
 ## 16. Streamlit dashboard
 
-`src/ui/app.py` configures a compact task shell and dispatches Overview, New Assessment, and History views. `src/ui/state.py` owns the session contract, `src/ui/services.py` adapts frozen backend APIs, `src/ui/components.py` contains reusable display primitives, and `src/ui/theme.css` centralizes the Console visual system.
+`src/ui/app.py` configures a compact task shell and dispatches Overview, New Assessment, and History views. `src/ui/state.py` owns the session contract, `src/ui/services.py` adapts frozen backend APIs, `src/ui/components.py` contains reusable display primitives, and `src/ui/theme.css` centralizes the white, black-text, and blue business visual system.
 
 The New Assessment view guides an officer through applicant selection, synthetic/CSV/SMS/receipt evidence, canonical validation, financial feature review, model scoring, localized explanation, assessment saving, and a separately confirmed human decision. Model loading uses `st.cache_resource`, but scoring and persistence remain explicit operations. Rerun guard flags prevent duplicate database writes.
 

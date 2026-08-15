@@ -22,12 +22,11 @@ def render_overview() -> None:
         eyebrow="Local branch workspace",
     )
 
-    action, note = st.columns([1, 3], vertical_alignment="center")
+    action, note = st.columns([1, 4], vertical_alignment="center")
     with action:
         if st.button(
             "Start new assessment",
             type="primary",
-            use_container_width=True,
             key="overview_start",
         ):
             reset_assessment()

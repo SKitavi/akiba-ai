@@ -20,34 +20,35 @@ UI shows setup guidance and never trains implicitly.
 
 ## Design direction
 
-The primary reference was the local AkibaAI **Console** design direction. Its
-compact branch-workstation layout became the basis for the top task navigation,
-cool steel canvas, institutional navy actions, restrained borders, small corner
-radii, dense financial rows, and monospaced numeric output. The Ledger and
-Branch explorations informed hierarchy and tone but were not selected because
-they were less efficient for repeated desktop assessment work.
+The workflow and information density originate in the local AkibaAI **Console**
+direction, while the final visual treatment deliberately follows a conventional
+white, black-text, and blue business application. This removes the stylized
+"AI dashboard" character in favor of familiar navigation, forms, tables,
+outlined sections, and restrained operational states.
 
 The DBOS frontend was used as a quality benchmark for shell discipline,
 constrained content width, compact headers, consistent states, accessible native
-controls, and responsive stacking. Its branding, gradients, authentication,
-domain concepts, and application code were not copied.
+controls, responsive stacking, and its light slate/blue token foundation. Its
+branding, gradients, authentication, domain concepts, and application code were
+not copied.
 
 ### Visual tokens
 
 | Role | Token |
 |---|---|
-| Primary ink | `#111C26` |
-| Institutional navy | `#0F2C44` |
-| Navy hover | `#163C5C` |
-| Link/focus | `#1F5C8B` |
-| Canvas | `#EEF1F4` |
-| Surface/subtle surface | `#FFFFFF` / `#F7F9FB` |
-| Border | `#D3DAE1` |
-| Valid / attention / failure | `#2F7D62` / `#7A5A1E` / `#A4452F` |
+| Primary text | `#0F172A` |
+| Primary blue | `#1D4ED8` |
+| Blue hover | `#1E40AF` |
+| Focus/selection surface | `#EFF6FF` |
+| Page background | `#F8FAFC` |
+| Surface/subtle surface | `#FFFFFF` / `#F1F5F9` |
+| Border | `#E2E8F0` |
+| Valid / attention / failure | `#15803D` / `#A16207` / `#B91C1C` |
 
-Inter/system UI is used for interface text and Roboto Mono/Consolas for figures.
-Controls use 5–6 px radii and borders rather than decorative shadows. Color is
-always accompanied by words, counts, or direction labels.
+Inter/system UI is used throughout, with tabular numerals for financial values.
+Controls use 6 px radii and borders rather than decorative shadows. Blue is
+reserved for navigation, focus, and primary actions; color is always accompanied
+by words, counts, or direction labels.
 
 ## Screen and component structure
 

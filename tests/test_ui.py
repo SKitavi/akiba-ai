@@ -143,7 +143,7 @@ def test_complete_assessment_language_and_persistence_workflow(
 
     assert not app.exception
     assert _has_markdown(app, "Model risk score")
-    assert _has_markdown(app, "Model version · ui_test_v1")
+    assert _has_markdown(app, "Model version: ui_test_v1")
     assert _has_markdown(app, "Factors increasing estimated risk")
     assert _has_markdown(app, "Factors reducing estimated risk")
     assert not _has_markdown(app, "Low Risk")
