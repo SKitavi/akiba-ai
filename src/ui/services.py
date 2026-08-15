@@ -23,7 +23,7 @@ from src.ingestion.normalization import NormalizationResult
 from src.ingestion.ocr_parser import extract_text_from_image, parse_transaction_text
 from src.ingestion.sms_parser import parse_sms_message
 from src.application.assessment import AssessmentResult, assess_applicant
-from src.model.loader import ModelBundle, load_model_bundle
+from src.model.loader import ModelBundle, load_model_bundle, resolve_model_path
 from src.storage.assessment_store import (
     HumanDecision,
     PersistedAssessment,
@@ -155,7 +155,7 @@ def run_assessment(
     language: str = "en",
 ) -> AssessmentResult:
     """Run the canonical assessment service with a cached model bundle."""
-    model_bundle = load_cached_model_bundle()
+    model_bundle = load_cached_model_bundle(str(resolve_model_path()))
     return assess_applicant(
         normalization.valid_transactions,
         model_bundle,
