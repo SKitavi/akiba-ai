@@ -2,7 +2,7 @@
 
 This module implements Step 3 of the Akiba AI ingestion pipeline:
 1. Generating mock thermal receipts for GUI and system testing.
-2. OCR text extraction with a binary-free/air-gapped graceful fallback.
+2. OCR text extraction with explicit errors for normal application ingestion.
 3. Regex-based parsing for raw SMS messages and structured receipts.
 
 Author: Senior Python Data Engineer
@@ -10,6 +10,7 @@ Author: Senior Python Data Engineer
 
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Union
 
@@ -93,7 +94,9 @@ def generate_sample_receipt_image(
     if not tx_id:
         tx_id = "UH13Q2B7N6" if provider == "M-Pesa" else "31196215166"
     if not counterparty:
-        counterparty = "Naivas Supermarket" if provider == "M-Pesa" else "NYARUGENGE MARKET"
+        counterparty = (
+            "Naivas Supermarket" if provider == "M-Pesa" else "NYARUGENGE MARKET"
+        )
 
     # Define receipt fields structured like a thermal POS receipt
     lines_to_draw = [
@@ -104,8 +107,16 @@ def generate_sample_receipt_image(
         ("KEYVAL", "Date:", "2026-08-13 12:30:15"),
         ("KEYVAL", "Counterparty:", counterparty),
         ("LINE", "-"),
-        ("KEYVAL", "Amount Paid:", f"Ksh {amount:,.2f}" if provider == "M-Pesa" else f"{int(amount)} RWF"),
-        ("KEYVAL", "Service Fee:", f"Ksh {fee:,.2f}" if provider == "M-Pesa" else f"{int(fee)} RWF"),
+        (
+            "KEYVAL",
+            "Amount Paid:",
+            f"Ksh {amount:,.2f}" if provider == "M-Pesa" else f"{int(amount)} RWF",
+        ),
+        (
+            "KEYVAL",
+            "Service Fee:",
+            f"Ksh {fee:,.2f}" if provider == "M-Pesa" else f"{int(fee)} RWF",
+        ),
         (
             "KEYVAL",
             "Wallet Balance:",
@@ -139,12 +150,16 @@ def generate_sample_receipt_image(
             draw.text((x, y), text, fill=(30, 30, 30), font=font_bold)
         elif item_type == "LINE":
             # Draw gray divider line
-            draw.line([(20, y + 10), (img_width - 20, y + 10)], fill=(180, 180, 180), width=1)
+            draw.line(
+                [(20, y + 10), (img_width - 20, y + 10)], fill=(180, 180, 180), width=1
+            )
         elif item_type == "KEYVAL":
             key, val = args[0], args[1]
             draw.text((20, y), key, fill=(70, 70, 70), font=font_regular)
             val_w = get_text_width(val, draw, font_bold)
-            draw.text((img_width - 20 - val_w, y), val, fill=(30, 30, 30), font=font_bold)
+            draw.text(
+                (img_width - 20 - val_w, y), val, fill=(30, 30, 30), font=font_bold
+            )
         y += line_height
 
     # Save to disk
@@ -154,7 +169,7 @@ def generate_sample_receipt_image(
 
 
 def get_mock_receipt_text(provider: str = "M-Pesa") -> str:
-    """Returns a realistic mock receipt text string for tests and fallbacks."""
+    """Return synthetic receipt text for explicitly requested tests and demos."""
     if provider == "MTN_MoMo":
         return """
 AKIBA SACCO AGENT
@@ -193,21 +208,33 @@ Thank You!
 """
 
 
-def extract_text_from_image(image_path: Union[str, Path]) -> str:
-    """Extracts OCR text from an image with binary-free/air-gapped safety.
+class OCRExtractionError(RuntimeError):
+    """Raised when receipt text cannot be extracted without synthetic fallback."""
 
-    If pytesseract is missing or tesseract-ocr is not configured in the system PATH,
-    this function will catch the exception and fall back to returning a mock receipt string.
+
+def extract_text_from_image(
+    image_path: Union[str, Path], allow_mock_fallback: bool = False
+) -> str:
+    """Extract OCR text without silently inventing transaction contents.
+
+    The explicitly synthetic ``ocr_stub`` pathway may set ``allow_mock_fallback``
+    for demonstrations. Normal application ingestion raises ``OCRExtractionError``
+    if Tesseract is unavailable or extraction fails.
 
     Args:
         image_path: Path to the receipt image file.
+        allow_mock_fallback: Permit synthetic receipt text for an explicit test
+                             or demo pathway. Keep disabled for real ingestion.
 
     Returns:
-        The extracted OCR text or a realistic mock fallback.
+        Extracted OCR text, or synthetic mock text only when explicitly allowed.
+
+    Raises:
+        OCRExtractionError: If extraction fails and mock fallback is disabled.
     """
     path_str = str(image_path).lower()
 
-    # Inferred provider based on filename for targeted fallback stubbing
+    # Infer a provider only for the explicitly enabled synthetic fallback.
     provider = "M-Pesa"
     if "momo" in path_str or "mtn" in path_str:
         provider = "MTN_MoMo"
@@ -219,11 +246,15 @@ def extract_text_from_image(image_path: Union[str, Path]) -> str:
             if isinstance(extracted, str) and extracted.strip():
                 return extracted
         except Exception:
-            # Catching TesseractNotFoundError, OSErrors, and other failures gracefully
+            # Convert OCR/library failures into the stable error contract below.
             pass
 
-    # Safe Fallback Stub
-    return get_mock_receipt_text(provider)
+    if allow_mock_fallback:
+        return get_mock_receipt_text(provider)
+    raise OCRExtractionError(
+        f"Could not extract receipt text from '{image_path}'. "
+        "Install/configure Tesseract or use the explicit synthetic OCR stub."
+    )
 
 
 def clean_amount(val: str) -> float:
@@ -258,6 +289,69 @@ COUNTERPARTY_PATTERNS = [
 ]
 
 
+def _extract_timestamp(text: str) -> str | None:
+    """Extract supported provider or receipt timestamps as canonical ISO text."""
+    patterns_and_formats = (
+        (
+            r"\bDate\s*:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})",
+            "%Y-%m-%d %H:%M:%S",
+        ),
+        (
+            r"\bat\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})",
+            "%Y-%m-%d %H:%M:%S",
+        ),
+        (
+            r"\bon\s+(\d{1,2}/\d{1,2}/\d{2}\s+at\s+\d{1,2}:\d{2}\s+[AP]M)",
+            "%d/%m/%y at %I:%M %p",
+        ),
+    )
+    for pattern, timestamp_format in patterns_and_formats:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            try:
+                timestamp = datetime.strptime(match.group(1), timestamp_format)
+            except ValueError:
+                continue
+            return timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    return None
+
+
+def _infer_transaction_type(text: str, provider: str | None) -> str | None:
+    """Infer only transaction types explicitly identified by supported wording."""
+    lower_text = text.lower()
+    if "airtime" in lower_text:
+        return "AIRTIME"
+    if "cash in" in lower_text or re.search(
+        r"received\s+ksh[\d,.]+\s+from\s+agent", lower_text
+    ):
+        return "CASH_IN"
+    if "cash out" in lower_text or "withdrawn from agent" in lower_text:
+        return "CASH_OUT"
+    if (
+        provider == "M-Pesa"
+        and " for account " in lower_text
+        and " sent to " in lower_text
+    ):
+        return "PAYBILL"
+    if provider == "MTN_MoMo" and re.search(
+        r"payment of .*\sfor\s.*successful", lower_text
+    ):
+        return "UTILITY"
+    if (
+        provider == "MTN_MoMo"
+        and "payment of" in lower_text
+        and "successful" in lower_text
+    ):
+        return "MOMOPAY_MERCHANT"
+    if provider == "M-Pesa" and " paid to " in lower_text:
+        return "BUY_GOODS_TILL"
+    if "have received" in lower_text:
+        return "P2P_RECEIVE"
+    if " sent to " in lower_text or "transferred to" in lower_text:
+        return "P2P_SEND"
+    return None
+
+
 def parse_transaction_text(text: str) -> dict[str, Any]:
     """Robust regex engine to parse transactional fields from SMS or receipt OCR text.
 
@@ -265,7 +359,9 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
         text: Raw SMS message string or OCR-extracted receipt text.
 
     Returns:
-        A dictionary containing: tx_id, amount, fee, balance, counterparty, provider, raw_text.
+        A dictionary containing extracted identifiers, money fields, provider,
+        timestamp, transaction type, counterparty, and original text. Fields that
+        cannot be extracted safely are returned as ``None``.
     """
     # Normalize duplicate whitespaces but keep lines intact
     normalized_lines = [line.strip() for line in text.splitlines() if line.strip()]
@@ -299,15 +395,17 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
             cand_upper = cand.upper()
             if cand_upper not in ("SUCCESSFUL", "CONFIRMED", "TRANSFERRED"):
                 # Require at least one letter and one number to filter out pure words or numbers
-                if any(c.isdigit() for c in cand_upper) and any(c.isalpha() for c in cand_upper):
+                if any(c.isdigit() for c in cand_upper) and any(
+                    c.isalpha() for c in cand_upper
+                ):
                     tx_id = cand
                     break
 
     # Attempt 3: Numeric only match of length 10-12 (MTN MoMo style)
     if not tx_id:
-        if (
-            provider == "MTN_MoMo"
-            and any(k in lower_text for k in ("txid", "transaction id", "transaction ref", "reference"))
+        if provider == "MTN_MoMo" and any(
+            k in lower_text
+            for k in ("txid", "transaction id", "transaction ref", "reference")
         ):
             num_candidates = re.findall(r"\b(\d{10,12})\b", cleaned_text)
             if num_candidates:
@@ -348,7 +446,9 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
     # Pattern-based Fallbacks for SMS logs (which lack key labels)
     if provider == "M-Pesa":
         # Extract all currency format amounts (e.g., Ksh2,500.00)
-        ksh_amounts = re.findall(r"(?:Ksh|KSH)\s*([\d,]+\.\d{2})\b", cleaned_text, re.IGNORECASE)
+        ksh_amounts = re.findall(
+            r"(?:Ksh|KSH)\s*([\d,]+\.\d{2})\b", cleaned_text, re.IGNORECASE
+        )
         if ksh_amounts:
             if amount is None:
                 amount = clean_amount(ksh_amounts[0])
@@ -373,13 +473,17 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
             # Parse Fee and Balance using contextual labels if not yet set
             if fee is None:
                 momo_fee = re.search(
-                    r"Fee\s*:\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s*RWF", cleaned_text, re.IGNORECASE
+                    r"Fee\s*:\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s*RWF",
+                    cleaned_text,
+                    re.IGNORECASE,
                 )
                 if momo_fee:
                     fee = clean_amount(momo_fee.group(1))
             if balance is None:
                 momo_bal = re.search(
-                    r"Balance\s*:\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s*RWF", cleaned_text, re.IGNORECASE
+                    r"Balance\s*:\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s*RWF",
+                    cleaned_text,
+                    re.IGNORECASE,
                 )
                 if momo_bal:
                     balance = clean_amount(momo_bal.group(1))
@@ -398,9 +502,15 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
 
     # Clean up counterparty noise (dates, status terms)
     if counterparty:
-        counterparty = re.sub(r"\s+successful.*$", "", counterparty, flags=re.IGNORECASE)
-        counterparty = re.sub(r"\s+at\s+\d{4}-\d{2}.*$", "", counterparty, flags=re.IGNORECASE)
-        counterparty = re.sub(r"\s+on\s+\d{1,2}/\d{1,2}/.*$", "", counterparty, flags=re.IGNORECASE)
+        counterparty = re.sub(
+            r"\s+successful.*$", "", counterparty, flags=re.IGNORECASE
+        )
+        counterparty = re.sub(
+            r"\s+at\s+\d{4}-\d{2}.*$", "", counterparty, flags=re.IGNORECASE
+        )
+        counterparty = re.sub(
+            r"\s+on\s+\d{1,2}/\d{1,2}/.*$", "", counterparty, flags=re.IGNORECASE
+        )
         counterparty = counterparty.strip(". ")
 
     # Fallback to Airtime or Unknown
@@ -417,6 +527,8 @@ def parse_transaction_text(text: str) -> dict[str, Any]:
         "balance": balance,
         "counterparty": counterparty,
         "provider": provider,
+        "timestamp": _extract_timestamp(cleaned_text),
+        "tx_type": _infer_transaction_type(cleaned_text, provider),
         "raw_text": text,
     }
 
@@ -452,15 +564,15 @@ if __name__ == "__main__":
         counterparty="NYARUGENGE MARKET",
     )
 
-    # 2. Extract OCR text (trigger fallback stub automatically on this system)
-    print("\nExtracting OCR text (with Graceful Fallback check)...")
-    mpesa_extracted_text = extract_text_from_image(mpesa_img)
-    momo_extracted_text = extract_text_from_image(momo_img)
+    # 2. This explicit demo permits synthetic text if real OCR is unavailable.
+    print("\nExtracting OCR text (explicit demo fallback enabled)...")
+    mpesa_extracted_text = extract_text_from_image(mpesa_img, allow_mock_fallback=True)
+    momo_extracted_text = extract_text_from_image(momo_img, allow_mock_fallback=True)
 
-    print("\n--- Extracted M-Pesa Text (Stubbed/OCR): ---")
+    print("\n--- Extracted M-Pesa Text (OCR or explicit demo fallback): ---")
     print(mpesa_extracted_text.strip())
 
-    print("\n--- Extracted MTN MoMo Text (Stubbed/OCR): ---")
+    print("\n--- Extracted MTN MoMo Text (OCR or explicit demo fallback): ---")
     print(momo_extracted_text.strip())
 
     # 3. Parse receipt texts into structured outputs

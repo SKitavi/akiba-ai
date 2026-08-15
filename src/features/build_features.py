@@ -24,30 +24,16 @@ import numpy as np
 import pandas as pd
 from typing import Optional
 
-# ---------------------------------------------------------------------------
-# Transaction type category maps
-# ---------------------------------------------------------------------------
-
-#: Transaction types that represent money flowing IN to the wallet
-INFLOW_TYPES: frozenset[str] = frozenset({"CASH_IN", "P2P_RECEIVE"})
-
-#: Transaction types that represent money flowing OUT of the wallet
-OUTFLOW_TYPES: frozenset[str] = frozenset(
-    {
-        "CASH_OUT",
-        "P2P_SEND",
-        "BUY_GOODS_TILL",
-        "MOMOPAY_MERCHANT",
-        "PAYBILL",
-        "UTILITY",
-        "AIRTIME",
-    }
+from src.domain.transactions import (
+    FEATURE_TRANSACTION_COLUMNS,
+    INFLOW_TYPES,
+    OUTFLOW_TYPES,
+    PRODUCTIVE_OUTFLOW_TYPES,
 )
 
-#: "Productive" outflows (bills, goods, utilities) — less risky than pure cash-out
-PRODUCTIVE_OUTFLOW_TYPES: frozenset[str] = frozenset(
-    {"BUY_GOODS_TILL", "MOMOPAY_MERCHANT", "PAYBILL", "UTILITY"}
-)
+# ---------------------------------------------------------------------------
+# Feature configuration
+# ---------------------------------------------------------------------------
 
 #: Low-balance threshold (consistent with calibrate_default_labels in generate_synthetic_data)
 LOW_BALANCE_THRESHOLD: float = 1500.0
@@ -56,6 +42,7 @@ LOW_BALANCE_THRESHOLD: float = 1500.0
 # ---------------------------------------------------------------------------
 # Internal helper
 # ---------------------------------------------------------------------------
+
 
 def _observation_months(group: pd.DataFrame) -> float:
     """Return the number of months spanned by the group's timestamps.
@@ -79,7 +66,10 @@ def _cv(series: pd.Series) -> float:
 # Per-applicant feature computation
 # ---------------------------------------------------------------------------
 
-def _compute_applicant_features(app_id: str, group: pd.DataFrame, income: float) -> dict:
+
+def _compute_applicant_features(
+    app_id: str, group: pd.DataFrame, income: float
+) -> dict:
     """Compute all behavioral features for a single applicant.
 
     Args:
@@ -109,17 +99,12 @@ def _compute_applicant_features(app_id: str, group: pd.DataFrame, income: float)
     tx_per_month = total_tx / obs_months
 
     # Daily transaction counts → weekly peak
-    group["date"] = group["timestamp"].dt.date
-    daily_counts = group.groupby("date").size()
-    # Aggregate to weekly buckets
     group["week"] = group["timestamp"].dt.isocalendar().week.astype(int)
     weekly_counts = group.groupby("week").size()
     peak_week_tx = int(weekly_counts.max()) if not weekly_counts.empty else 0
 
-    # Recency: days since last transaction (relative to observation window end)
     obs_end = group["timestamp"].max()
-    days_since_last_tx = float((obs_end - group["timestamp"].max()).days)  # 0 within window
-    # More useful: days since last INFLOW
+    # Recency of incoming funds relative to the applicant's observation end.
     if not inflows.empty:
         days_since_last_inflow = float((obs_end - inflows["timestamp"].max()).days)
     else:
@@ -172,10 +157,9 @@ def _compute_applicant_features(app_id: str, group: pd.DataFrame, income: float)
         inflow_per_month = inflow_count / obs_months
 
         # Regularity: fraction of active months that had ≥1 inflow event
-        months_with_inflow = (
-            inflows.assign(month_str=inflows["timestamp"].dt.to_period("M").astype(str))["month_str"]
-            .nunique()
-        )
+        months_with_inflow = inflows.assign(
+            month_str=inflows["timestamp"].dt.to_period("M").astype(str)
+        )["month_str"].nunique()
         inflow_regularity = months_with_inflow / max(active_months, 1)
     else:
         inflow_total = inflow_mean = inflow_std = inflow_cv = 0.0
@@ -189,7 +173,9 @@ def _compute_applicant_features(app_id: str, group: pd.DataFrame, income: float)
     if not outflows.empty:
         outflow_total = float(outflows["amount"].sum())
         outflow_mean = float(outflows["amount"].mean())
-        outflow_std = float(outflows["amount"].std(ddof=1)) if len(outflows) > 1 else 0.0
+        outflow_std = (
+            float(outflows["amount"].std(ddof=1)) if len(outflows) > 1 else 0.0
+        )
         outflow_cv = _cv(outflows["amount"])
         outflow_count = len(outflows)
         outflow_per_month = outflow_count / obs_months
@@ -278,6 +264,7 @@ def _compute_applicant_features(app_id: str, group: pd.DataFrame, income: float)
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def build_feature_table(
     events_df: pd.DataFrame,
     applicants_df: Optional[pd.DataFrame] = None,
@@ -307,7 +294,7 @@ def build_feature_table(
     Raises:
         ValueError: If required columns are missing from ``events_df``.
     """
-    required = {"applicant_id", "timestamp", "tx_type", "amount", "post_balance"}
+    required = set(FEATURE_TRANSACTION_COLUMNS)
     missing = required - set(events_df.columns)
     if missing:
         raise ValueError(f"events_df is missing required columns: {missing}")

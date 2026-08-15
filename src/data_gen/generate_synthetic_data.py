@@ -36,7 +36,12 @@ UTILITIES_MOMO = [
     {"name": "WASAC", "ref_label": "account", "ref_prefix": ""},
 ]
 
-MERCHANTS_MPESA_TILL = ["Naivas Supermarket", "Mama Mboga Grocery", "Kiprotich Duka", "City Pharmacy"]
+MERCHANTS_MPESA_TILL = [
+    "Naivas Supermarket",
+    "Mama Mboga Grocery",
+    "Kiprotich Duka",
+    "City Pharmacy",
+]
 MERCHANTS_MOMO_CODE = [
     ("KIGALI STORE", "123456"),
     ("NYARUGENGE MARKET", "654321"),
@@ -63,7 +68,15 @@ def generate_phone(provider):
 # PROVIDER-SPECIFIC SMS FORMATTER ENGINE
 # ----------------------------------------------------------------------
 def build_sms_body(
-    provider, tx_type, amount, balance, tx_id, tx_date, counterparty="", account_ref="", fee=0.0
+    provider,
+    tx_type,
+    amount,
+    balance,
+    tx_id,
+    tx_date,
+    counterparty="",
+    account_ref="",
+    fee=0.0,
 ):
     """
     Renders realistic, provider-specific SMS bodies# cite: 42, 43.
@@ -121,7 +134,8 @@ def build_sms_body(
             )
         elif tx_type == "P2P_RECEIVE":
             return (
-                f"You have received {amt_i} RWF from {counterparty} " f"at {date_str}. Balance: {bal_i}RWF."
+                f"You have received {amt_i} RWF from {counterparty} "
+                f"at {date_str}. Balance: {bal_i}RWF."
             )
         elif tx_type == "CASH_IN":
             return (
@@ -146,7 +160,8 @@ def build_sms_body(
             )
         elif tx_type == "AIRTIME":
             return (
-                f"You bought {amt_i} RWF of Airtime at {date_str}. Balance: {bal_i}RWF. Enjoy MTN services."
+                f"You bought {amt_i} RWF of Airtime at {date_str}. "
+                f"Balance: {bal_i}RWF. Enjoy MTN services."
             )
 
     return f"TxID:{tx_id} Amount: {amount}. Balance: {balance}."
@@ -167,10 +182,14 @@ def generate_dataset(num_applicants=NUM_APPLICANTS):
         # Financial behavior parameters tuned by persona # cite: 3, 4, 6
         if persona == "informal_trader":
             income = np.random.uniform(150000, 600000)
-            monthly_txs = random.randint(30, 75)  # High daily cash flow frequency # cite: 4
+            monthly_txs = random.randint(
+                30, 75
+            )  # High daily cash flow frequency # cite: 4
         else:  # farmer
             income = np.random.uniform(100000, 800000)
-            monthly_txs = random.randint(6, 22)  # Lumpy, seasonal transaction pattern # cite: 6
+            monthly_txs = random.randint(
+                6, 22
+            )  # Lumpy, seasonal transaction pattern # cite: 6
 
         total_days = (END_DATE - START_DATE).days
         total_tx_count = int(monthly_txs * (total_days / 30.0))
@@ -180,14 +199,29 @@ def generate_dataset(num_applicants=NUM_APPLICANTS):
 
         for day_offset in random_days:
             tx_date = START_DATE + timedelta(
-                days=int(day_offset), hours=random.randint(6, 21), minutes=random.randint(0, 59)
+                days=int(day_offset),
+                hours=random.randint(6, 21),
+                minutes=random.randint(0, 59),
             )
 
             # Select Transaction Type
             tx_type = random.choices(
-                ["CASH_IN", "P2P_RECEIVE", "CASH_OUT", "P2P_SEND", "MERCHANT", "UTILITY", "AIRTIME"],
+                [
+                    "CASH_IN",
+                    "P2P_RECEIVE",
+                    "CASH_OUT",
+                    "P2P_SEND",
+                    "MERCHANT",
+                    "UTILITY",
+                    "AIRTIME",
+                ],
                 weights=[0.20, 0.25, 0.20, 0.15, 0.10, 0.05, 0.05],
             )[0]
+
+            # A depleted wallet cannot fund an outgoing transaction. Route that
+            # synthetic event to cash-in instead of fabricating an overdraft.
+            if tx_type not in ["CASH_IN", "P2P_RECEIVE"] and current_balance <= 0:
+                tx_type = "CASH_IN"
 
             fee = 0.0
             counterparty = ""
@@ -199,15 +233,15 @@ def generate_dataset(num_applicants=NUM_APPLICANTS):
                 amount = max(200, min(amount, 250000))
                 current_balance += amount
                 counterparty = (
-                    f"Agent_{random.randint(100, 999)}" if tx_type == "CASH_IN" else generate_phone(provider)
+                    f"Agent_{random.randint(100, 999)}"
+                    if tx_type == "CASH_IN"
+                    else generate_phone(provider)
                 )
 
             # Money Out
             else:
                 amount = round(np.random.exponential(scale=income / 12), -2)
-                amount = max(100, min(amount, current_balance * 0.95))
-                if current_balance < amount:
-                    amount = max(50, current_balance * 0.5)
+                amount = min(max(100, amount), current_balance)
 
                 current_balance -= amount
 
@@ -230,13 +264,16 @@ def generate_dataset(num_applicants=NUM_APPLICANTS):
                         tx_type = "PAYBILL"
                         util = random.choice(UTILITIES_MPESA)
                         counterparty = util["name"]
-                        account_ref = f"{util['acc_prefix']}{random.randint(100000, 999999)}"
+                        account_ref = (
+                            f"{util['acc_prefix']}{random.randint(100000, 999999)}"
+                        )
                         fee = util["fee"]
                     else:
                         util = random.choice(UTILITIES_MOMO)
                         counterparty = util["name"]
                         account_ref = (
-                            f"{util['ref_label']} {util['ref_prefix']}{random.randint(100000, 999999)}"
+                            f"{util['ref_label']} {util['ref_prefix']}"
+                            f"{random.randint(100000, 999999)}"
                         )
                 elif tx_type == "AIRTIME":
                     counterparty = "Self"
@@ -268,18 +305,27 @@ def generate_dataset(num_applicants=NUM_APPLICANTS):
             )
 
         applicants.append(
-            {"applicant_id": app_id, "persona": persona, "provider": provider, "avg_monthly_income": income}
+            {
+                "applicant_id": app_id,
+                "persona": persona,
+                "provider": provider,
+                "avg_monthly_income": income,
+            }
         )
 
     return pd.DataFrame(applicants), pd.DataFrame(sms_logs)
 
 
-def calibrate_default_labels(df_applicants: pd.DataFrame, df_sms: pd.DataFrame) -> pd.DataFrame:
+def calibrate_default_labels(
+    df_applicants: pd.DataFrame, df_sms: pd.DataFrame
+) -> pd.DataFrame:
     """Computes ground-truth risk indicators and calibrates default labels (~20% rate)."""
     applicant_metrics = []
 
     for app_id, group in df_sms.groupby("applicant_id"):
-        inflows = group[group["tx_type"].isin(["CASH_IN", "P2P_RECEIVE"])]["amount"].sum()
+        inflows = group[group["tx_type"].isin(["CASH_IN", "P2P_RECEIVE"])][
+            "amount"
+        ].sum()
         outflows = group[
             group["tx_type"].isin(
                 [
@@ -327,12 +373,22 @@ def calibrate_default_labels(df_applicants: pd.DataFrame, df_sms: pd.DataFrame) 
 
     # Calibrate Target Non-Performing Loan (Default) Rate ~ 20% # cite: 3, 9, 30, 31
     threshold = df_metrics["raw_risk_score"].quantile(1 - TARGET_DEFAULT_RATE)
-    df_metrics["default_label"] = (df_metrics["raw_risk_score"] >= threshold).astype(int)
+    df_metrics["default_label"] = (df_metrics["raw_risk_score"] >= threshold).astype(
+        int
+    )
 
     # Combine into final applicant target frame
     df_final_applicants = pd.merge(
         df_applicants,
-        df_metrics[["applicant_id", "net_flow", "tx_count", "low_balance_events", "default_label"]],
+        df_metrics[
+            [
+                "applicant_id",
+                "net_flow",
+                "tx_count",
+                "low_balance_events",
+                "default_label",
+            ]
+        ],
         on="applicant_id",
     )
     return df_final_applicants
@@ -354,7 +410,9 @@ def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     df_sms.to_csv(DATA_DIR / "synthetic_momo_sms_logs.csv", index=False)
-    df_final_applicants.to_csv(DATA_DIR / "synthetic_applicants_labeled.csv", index=False)
+    df_final_applicants.to_csv(
+        DATA_DIR / "synthetic_applicants_labeled.csv", index=False
+    )
 
     # ----------------------------------------------------------------------
     # DATASET SUMMARY REPORT
@@ -364,12 +422,16 @@ def main():
     print("=" * 50)
     print(f"Total Applicants Labeled: {len(df_final_applicants)}")
     print(f"Total SMS Logs Generated : {len(df_sms)}")
-    print(f"Calibrated Default Rate  : {df_final_applicants['default_label'].mean() * 100:.2f}%")
+    print(
+        f"Calibrated Default Rate  : {df_final_applicants['default_label'].mean() * 100:.2f}%"
+    )
     print("-" * 50)
     print("Default Rate Distribution by Persona:")
     print(
         pd.crosstab(
-            df_final_applicants["persona"], df_final_applicants["default_label"], normalize="index"
+            df_final_applicants["persona"],
+            df_final_applicants["default_label"],
+            normalize="index",
         ).round(3)
         * 100
     )
