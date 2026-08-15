@@ -15,6 +15,7 @@ import pandas as pd
 import xgboost as xgb
 
 from src.features.build_features import FEATURE_COLUMNS
+from src.model.loader import load_model_bundle
 
 
 def prepare_model_features(applicant_features: pd.DataFrame) -> pd.DataFrame:
@@ -102,10 +103,5 @@ def score_applicant(
         FileNotFoundError: If ``model_path`` does not exist on disk.
         ValueError:        If required feature columns are missing.
     """
-    model_path = Path(model_path)
-    if not model_path.exists():
-        raise FileNotFoundError(f"Model artifact not found: {model_path}")
-
-    model = xgb.XGBClassifier()
-    model.load_model(str(model_path))
-    return predict_risk_score(model, applicant_features)
+    model_bundle = load_model_bundle(model_path)
+    return predict_risk_score(model_bundle.model, applicant_features)
