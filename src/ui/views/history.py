@@ -17,15 +17,30 @@ from src.ui.services import load_assessment_history
 from src.ui.state import reset_assessment
 
 
+_SOURCE_LABELS = {
+    "demo": "Demonstration data",
+    "csv": "CSV upload",
+    "sms": "SMS messages",
+    "receipt": "Receipt image",
+}
+
+
+def _format_timestamp(value: str) -> str:
+    timestamp = pd.to_datetime(value, utc=True, errors="coerce")
+    if pd.isna(timestamp):
+        return value
+    return timestamp.strftime("%Y-%m-%d %H:%M UTC")
+
+
 def _history_frame(records: tuple[AssessmentHistoryItem, ...]) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
                 "applicant": item.applicant_id,
-                "assessed": item.assessed_at,
+                "assessed": _format_timestamp(item.assessed_at),
                 "model": item.model_version,
                 "risk_score": item.risk_score,
-                "source": item.source_key or "Unspecified",
+                "source": _SOURCE_LABELS.get(item.source_key or "", "Unspecified"),
                 "decision": item.decision.title() if item.decision else "Awaiting",
                 "rationale": item.rationale or "",
             }

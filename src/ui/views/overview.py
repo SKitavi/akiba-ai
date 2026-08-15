@@ -28,12 +28,19 @@ _SOURCE_LABELS = {
 }
 
 
+def _format_timestamp(value: str) -> str:
+    timestamp = pd.to_datetime(value, utc=True, errors="coerce")
+    if pd.isna(timestamp):
+        return value
+    return timestamp.strftime("%Y-%m-%d %H:%M UTC")
+
+
 def _recent_frame(records: tuple[AssessmentHistoryItem, ...]) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
                 "Applicant": item.applicant_id,
-                "Assessed": item.assessed_at,
+                "Assessed": _format_timestamp(item.assessed_at),
                 "Model score": item.risk_score,
                 "Officer decision": (
                     item.decision.title() if item.decision else "Awaiting"
