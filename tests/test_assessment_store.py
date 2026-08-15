@@ -11,6 +11,7 @@ import pytest
 from src.application.assessment import AssessmentResult
 from src.features.build_features import FEATURE_COLUMNS
 from src.storage.assessment_store import (
+    AssessmentAuditContext,
     AssessmentPersistenceError,
     HumanDecision,
     persist_assessment,
@@ -107,7 +108,14 @@ def test_schema_contains_explanations_table(connection: sqlite3.Connection) -> N
         ).fetchall()
     }
 
-    assert {"features", "scores", "explanations", "decisions"}.issubset(tables)
+    assert {
+        "features",
+        "scores",
+        "explanations",
+        "decisions",
+        "assessment_runs",
+        "assessment_decision_links",
+    }.issubset(tables)
 
 
 def test_assessment_persistence_is_complete(connection: sqlite3.Connection) -> None:
@@ -116,9 +124,51 @@ def test_assessment_persistence_is_complete(connection: sqlite3.Connection) -> N
     assert stored.feature_id > 0
     assert stored.score_id > 0
     assert stored.explanation_id > 0
+    assert stored.assessment_id > 0
     assert connection.execute("SELECT COUNT(*) FROM features").fetchone()[0] == 1
     assert connection.execute("SELECT COUNT(*) FROM scores").fetchone()[0] == 1
     assert connection.execute("SELECT COUNT(*) FROM explanations").fetchone()[0] == 1
+    assert connection.execute("SELECT COUNT(*) FROM assessment_runs").fetchone()[0] == 1
+
+
+def test_assessment_audit_context_is_persisted(connection: sqlite3.Connection) -> None:
+    stored = persist_assessment(
+        connection,
+        _assessment(),
+        AssessmentAuditContext(
+            source_key=" csv ",
+            processed_count=12,
+            valid_count=10,
+            rejected_count=2,
+            warning_count=1,
+        ),
+    )
+
+    row = connection.execute(
+        """
+        SELECT source_key, processed_count, valid_count, rejected_count, warning_count
+        FROM assessment_runs WHERE assessment_id = ?
+        """,
+        (stored.assessment_id,),
+    ).fetchone()
+    assert row == ("csv", 12, 10, 2, 1)
+
+
+def test_inconsistent_audit_counts_are_rejected(
+    connection: sqlite3.Connection,
+) -> None:
+    with pytest.raises(ValueError, match="must equal"):
+        persist_assessment(
+            connection,
+            _assessment(),
+            AssessmentAuditContext(
+                processed_count=3,
+                valid_count=2,
+                rejected_count=0,
+            ),
+        )
+
+    assert connection.execute("SELECT COUNT(*) FROM assessment_runs").fetchone()[0] == 0
 
 
 def test_feature_score_version_and_explanation_payloads_are_persisted(
@@ -193,6 +243,48 @@ def test_human_decision_values_are_persisted(
 def test_invalid_human_decision_is_rejected(connection: sqlite3.Connection) -> None:
     with pytest.raises(ValueError, match="Allowed values"):
         record_human_decision(connection, "APP_0001", "AUTO_APPROVE")
+
+    assert connection.execute("SELECT COUNT(*) FROM decisions").fetchone()[0] == 0
+
+
+def test_human_decision_can_be_linked_to_assessment(
+    connection: sqlite3.Connection,
+) -> None:
+    stored = persist_assessment(connection, _assessment())
+
+    decision_id = record_human_decision(
+        connection,
+        "APP_0001",
+        HumanDecision.REVIEW,
+        assessment_id=stored.assessment_id,
+    )
+
+    link = connection.execute(
+        "SELECT assessment_id, decision_id FROM assessment_decision_links"
+    ).fetchone()
+    assert link == (stored.assessment_id, decision_id)
+    with pytest.raises(ValueError, match="already has"):
+        record_human_decision(
+            connection,
+            "APP_0001",
+            HumanDecision.APPROVE,
+            assessment_id=stored.assessment_id,
+        )
+    assert connection.execute("SELECT COUNT(*) FROM decisions").fetchone()[0] == 1
+
+
+def test_linked_decision_requires_matching_applicant(
+    connection: sqlite3.Connection,
+) -> None:
+    stored = persist_assessment(connection, _assessment())
+
+    with pytest.raises(ValueError, match="does not belong"):
+        record_human_decision(
+            connection,
+            "APP_OTHER",
+            HumanDecision.DECLINE,
+            assessment_id=stored.assessment_id,
+        )
 
     assert connection.execute("SELECT COUNT(*) FROM decisions").fetchone()[0] == 0
 
