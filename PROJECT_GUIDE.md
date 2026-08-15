@@ -151,6 +151,7 @@ This writes:
 ### Run the complete training pipeline
 
 ```powershell
+$env:PYTHONUTF8 = "1"  # Windows: avoid CP1252 output failures
 python -m src.model.run_training
 ```
 

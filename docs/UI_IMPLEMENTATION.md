@@ -10,6 +10,7 @@ feature-engineering, SHAP, narrative, or persistence business logic.
 Run it from the repository root after training the local model:
 
 ```powershell
+$env:PYTHONUTF8 = "1"  # needed on Windows consoles that use CP1252
 python -m src.model.run_training
 python -m streamlit run src/ui/app.py
 ```
@@ -182,5 +183,8 @@ input. The complete backend suite remains the regression boundary.
 - Authentication, authorization, encryption, audit identity, migrations, consent,
   and production governance are outside this synthetic MVP.
 - Receipt quality and local Tesseract installation determine OCR success.
+- On Windows consoles using CP1252, the frozen training CLI can fail while
+  printing a Unicode evaluation symbol after it has written the model. Set
+  `$env:PYTHONUTF8 = "1"` before training so the full evaluation report completes.
 - The synthetic model has no approved SACCO policy thresholds and must not be used
   for real lending decisions.
