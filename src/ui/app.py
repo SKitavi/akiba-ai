@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.ui.components import inject_theme, render_app_bar
+from src.ui.components import inject_theme, render_sidebar
 from src.ui.state import Route, initialize_state
 from src.ui.views.history import render_history
 from src.ui.views.overview import render_overview
@@ -28,11 +28,11 @@ def main() -> None:
         page_title="AkibaAI · Credit assessment",
         page_icon="A",
         layout="wide",
-        initial_sidebar_state="collapsed",
+        initial_sidebar_state="expanded",
     )
     inject_theme()
     initialize_state()
-    render_app_bar()
+    render_sidebar()
     _render_current_route()
 
 

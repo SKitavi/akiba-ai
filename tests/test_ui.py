@@ -69,11 +69,8 @@ def test_application_loads_and_default_navigation_works() -> None:
     app = AppTest.from_file(_APP_PATH, default_timeout=30).run()
 
     assert not app.exception
-    assert [button.label for button in app.button[:3]] == [
-        "Overview",
-        "New Assessment",
-        "History",
-    ]
+    button_labels = {button.label for button in app.button}
+    assert {"Overview", "New Assessment", "History"} <= button_labels
     assert _has_markdown(app, "Credit assessment workspace")
 
     _button(app, "History").click().run()
