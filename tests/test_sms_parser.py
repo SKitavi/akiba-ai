@@ -16,6 +16,8 @@ def test_parse_mpesa_sms() -> None:
     assert res["balance"] == 0.0
     assert res["counterparty"] == "HARUN MWANGI 0112259522"
     assert res["provider"] == "M-Pesa"
+    assert res["timestamp"] == "2026-08-01 17:19:00"
+    assert res["tx_type"] == "P2P_SEND"
 
 
 def test_parse_momo_sms() -> None:
@@ -27,6 +29,8 @@ def test_parse_momo_sms() -> None:
     assert res["counterparty"] == "25078123456"
     assert res["provider"] == "MTN_MoMo"
     assert res["tx_id"] is None
+    assert res["timestamp"] == "2026-03-14 14:22:10"
+    assert res["tx_type"] == "P2P_SEND"
 
 
 def test_parse_receipt_format() -> None:
@@ -51,3 +55,5 @@ Status: SUCCESSFUL
     assert res["balance"] == 14200.0
     assert res["counterparty"] == "NYARUGENGE MARKET"
     assert res["provider"] == "MTN_MoMo"
+    assert res["timestamp"] == "2026-08-13 12:30:15"
+    assert res["tx_type"] is None

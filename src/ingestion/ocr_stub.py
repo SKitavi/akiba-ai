@@ -10,5 +10,5 @@ from src.ingestion.ocr_parser import extract_text_from_image
 
 
 def extract_text_from_receipt(image_path: Path) -> str:
-    """Extract OCR text from a synthetic receipt image."""
-    return extract_text_from_image(image_path)
+    """Extract text with an explicitly synthetic fallback for demo fixtures."""
+    return extract_text_from_image(image_path, allow_mock_fallback=True)
