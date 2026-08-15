@@ -394,13 +394,19 @@ body,
 }
 
 [data-testid="stButton"] button[kind="primary"],
-[data-testid="stFormSubmitButton"] button[kind="primary"] {
+[data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"] {
   background: var(--ak-navy-800);
   border-color: var(--ak-navy-800);
+  color: #ffffff !important;
+}
+
+[data-testid="stButton"] button[kind="primary"] *,
+[data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"] * {
+  color: #ffffff !important;
 }
 
 [data-testid="stButton"] button[kind="primary"]:hover,
-[data-testid="stFormSubmitButton"] button[kind="primary"]:hover {
+[data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"]:hover {
   background: var(--ak-navy-600);
   border-color: var(--ak-navy-600);
 }
@@ -419,6 +425,19 @@ textarea:focus-visible,
   overflow: hidden;
 }
 
+/* Streamlit's Material icon font may be unavailable in local/offline mode. */
+[data-testid="stExpander"] summary [data-testid="stIconMaterial"] {
+  font-family: Inter, "Segoe UI", system-ui, sans-serif !important;
+  font-size: 0 !important;
+  width: 0.8rem;
+}
+
+[data-testid="stExpander"] summary [data-testid="stIconMaterial"]::before {
+  content: ">";
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 @media (max-width: 900px) {
   .block-container {
     padding-inline: 0.75rem;
@@ -433,6 +452,33 @@ textarea:focus-visible,
     justify-content: flex-start;
     gap: 0.55rem;
     white-space: normal;
+  }
+
+  [data-testid="stHorizontalBlock"]:has(.ak-brand) > [data-testid="stColumn"]:nth-child(1) {
+    flex: 0.7 1 0 !important;
+  }
+
+  [data-testid="stHorizontalBlock"]:has(.ak-brand) > [data-testid="stColumn"]:nth-child(2) {
+    flex: 3.3 1 0 !important;
+  }
+
+  [data-testid="stHorizontalBlock"]:has(.ak-brand) > [data-testid="stColumn"]:nth-child(3) {
+    flex: 1.8 1 0 !important;
+  }
+
+  [data-testid="stHorizontalBlock"]:has(.ak-brand) [data-testid="stButton"] button {
+    font-size: 0.84rem;
+    padding-inline: 0.35rem;
+  }
+
+  [data-testid="stHorizontalBlock"]:has(.ak-score-panel) {
+    flex-wrap: wrap;
+  }
+
+  [data-testid="stHorizontalBlock"]:has(.ak-score-panel) > [data-testid="stColumn"] {
+    flex: 1 1 100% !important;
+    min-width: 100% !important;
+    width: 100% !important;
   }
 
   [data-testid="stButton"] button,
