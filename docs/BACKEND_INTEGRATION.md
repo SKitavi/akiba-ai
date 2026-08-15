@@ -643,3 +643,55 @@ collect input
 ```
 
 It must not duplicate feature engineering, model loading, scoring, SHAP ranking, localization, SQL, or decision policy.
+
+### UI handoff contract
+
+The UI should use the actual backend APIs in this order:
+
+```python
+from pathlib import Path
+
+from src.application.assessment import assess_applicant
+from src.ingestion.normalization import normalize_transactions
+from src.model.loader import load_model_bundle
+from src.storage.assessment_store import (
+    HumanDecision,
+    persist_assessment,
+    record_human_decision,
+)
+from src.storage.db import get_connection, initialize_schema
+
+
+normalization = normalize_transactions(records)
+applicant_transactions = tuple(
+    transaction
+    for transaction in normalization.valid_transactions
+    if transaction.applicant_id == applicant_id
+)
+
+bundle = load_model_bundle()
+result = assess_applicant(
+    transactions=applicant_transactions,
+    model_bundle=bundle,
+    applicant_id=applicant_id,
+    applicants_df=applicants,
+    language="en",
+)
+
+connection = get_connection()
+initialize_schema(connection, Path("src/storage/schema.sql"))
+stored = persist_assessment(connection, result)
+
+# Run only after an authorized person makes an explicit choice in the UI.
+decision_id = record_human_decision(
+    connection,
+    applicant_id=result.applicant_id,
+    decision=HumanDecision.REVIEW,
+    rationale=human_entered_rationale,
+)
+```
+
+Before assessment, Streamlit should display `processed_count`, `valid_count`,
+`rejected_count`, and each structured rejection. It should load the bundle once
+and reuse it across reruns where practical. The human-decision call must remain a
+separate UI action after the assessment is displayed.

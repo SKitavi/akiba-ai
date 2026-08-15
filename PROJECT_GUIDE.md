@@ -86,8 +86,7 @@ akiba-ai/
 |   `-- samples/                      Sample receipt PNG files
 |-- docs/
 |   |-- data_schema.md                Synthetic dataset specification
-|   |-- BACKEND_INTEGRATION.md        Complete backend architecture and APIs
-|   `-- architecture.png              Current placeholder architecture image
+|   `-- BACKEND_INTEGRATION.md        Complete backend architecture and APIs
 |-- models/                           Generated model/evaluation artifacts
 |-- reports/                          Generated reports
 |-- src/
@@ -106,7 +105,7 @@ akiba-ai/
 
 ## 5. Environment setup
 
-The repository is Python-based. The dependency file pins Faker, NumPy, pandas, pytesseract, scikit-learn, XGBoost, SHAP, Streamlit, matplotlib, pytest, Black, and Flake8.
+The repository is Python-based. The dependency file pins Faker, NumPy, pandas, pytesseract, Pillow, scikit-learn, XGBoost, SHAP, Streamlit, matplotlib, pytest, Black, and Flake8.
 
 ### Windows PowerShell
 
@@ -130,9 +129,9 @@ python -m pip install -r requirements.txt
 
 ### Optional OCR system dependency
 
-`pytesseract` is a Python wrapper. Real OCR also requires the Tesseract executable to be installed and available on the system path. If it is unavailable, AkibaAI deliberately falls back to provider-specific mock receipt text.
+`pytesseract` is a Python wrapper. Real OCR also requires the Tesseract executable to be installed and available on the system path. If it is unavailable or extraction fails, normal application ingestion raises `OCRExtractionError`; it never substitutes believable financial data.
 
-Pillow is used by the receipt-image code but is not explicitly pinned in `requirements.txt`. It may arrive as a transitive dependency; it should be added explicitly if receipt image generation is treated as a supported feature.
+Only the explicitly synthetic OCR stub and the module's developer demonstration opt into provider-specific mock receipt text. Pillow is pinned directly because receipt-image generation imports it as a supported project dependency.
 
 ## 6. Running the project
 
@@ -527,9 +526,7 @@ For meaningful validation, the model would need consented historical data with o
 - Generic OCR receipts may omit transaction type and therefore require explicit context.
 - Configuration reads environment variables but does not parse `.env` files automatically.
 - There is no model registry, caching policy, or database migration framework.
-- Receipt-image generation relies on Pillow without declaring it directly.
-- The architecture image is presently not useful documentation.
-- Model metadata and evaluation JSON files are unintentionally ignored along with model JSON artifacts, despite the `.gitignore` comment suggesting otherwise.
+- Generated model artifacts, metadata, and evaluation files remain local under the documented `.gitignore` policy.
 
 ## 20. Recommended implementation order
 
@@ -537,10 +534,8 @@ For meaningful validation, the model would need consented historical data with o
 
 1. Create and document the supported Python version.
 2. Install dependencies and run all tests.
-3. Add Pillow explicitly.
-4. Run the training command and record the resulting metrics.
-5. Fix lint, type, and test failures before extending the system.
-6. Align `.env.example`, README paths, and `.gitignore` behavior.
+3. Run the training command and record the resulting metrics.
+4. Resolve remaining legacy repository-wide formatting and lint findings separately.
 
 ### Phase 2: Close the ingestion gap
 

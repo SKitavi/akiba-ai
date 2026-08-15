@@ -331,53 +331,47 @@ The integration test fits an XGBoost model, explains one applicant with real Tre
 - Kiswahili labels and wording should receive review from a domain-fluent SACCO practitioner before a pilot.
 - No score-band or approve/decline policy is implemented.
 - The current UI does not yet consume these APIs.
-- Explanations are not yet persisted in SQLite.
+- The integrated backend persists structured explanations and localized narratives with the applicant ID, model version, language, and timestamp. The SQLite MVP still lacks migrations, encryption, and a broader audit/governance model.
 
 ## 9. Future Streamlit integration
 
-The Streamlit issue should load the model once, build or select one applicant feature row, and call the two public functions. It should not recompute SHAP directions, rankings, labels, translations, or disclaimers itself.
+The Streamlit issue should normalize input, reuse one validated model bundle, and call the application service. It should not load XGBoost directly or recompute features, SHAP directions, rankings, labels, translations, or disclaimers itself.
 
 ```python
-from pathlib import Path
-
-import pandas as pd
-import xgboost as xgb
-
-from src.xai.narratives import generate_risk_narrative
-from src.xai.shap_explainer import explain_prediction
+from src.application.assessment import assess_applicant
+from src.ingestion.normalization import normalize_transactions
+from src.model.loader import load_model_bundle
 
 
-def explain_for_ui(
-    model_path: Path,
-    applicant_features: pd.DataFrame,
-    language: str,
-):
-    model = xgb.XGBClassifier()
-    model.load_model(model_path)
-
-    explanation = explain_prediction(
-        model=model,
-        features=applicant_features,
-        top_n=5,
-    )
-    return generate_risk_narrative(explanation, language=language)
+normalization = normalize_transactions(records)
+applicant_transactions = tuple(
+    transaction
+    for transaction in normalization.valid_transactions
+    if transaction.applicant_id == applicant_id
+)
+bundle = load_model_bundle()
+result = assess_applicant(
+    transactions=applicant_transactions,
+    model_bundle=bundle,
+    applicant_id=applicant_id,
+    applicants_df=applicants,
+    language="sw",
+)
 ```
 
 The UI can then render:
 
 ```python
-narrative = explain_for_ui(model_path, applicant_row, language="sw")
+st.metric("Risk score", f"{result.risk_score:.3f}")
+st.write(result.narrative.summary)
 
-st.metric("Risk score", f"{narrative.risk_score:.3f}")
-st.write(narrative.summary)
-
-for factor in narrative.increasing_risk_factors:
+for factor in result.narrative.increasing_risk_factors:
     st.warning(factor.text)
 
-for factor in narrative.reducing_risk_factors:
+for factor in result.narrative.reducing_risk_factors:
     st.success(factor.text)
 
-st.caption(narrative.disclaimer)
+st.caption(result.narrative.disclaimer)
 ```
 
 The UI should label the number as a model risk score, display both directional sections even when one is empty, show the disclaimer, retain the model version for audit, and leave the final lending decision to an authorized human reviewer.
