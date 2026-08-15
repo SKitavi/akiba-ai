@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from html import escape
+import sqlite3
 from typing import Final
 
 import pandas as pd
@@ -10,12 +13,21 @@ import streamlit as st
 from src.domain.transactions import TransactionType
 from src.ingestion.normalization import TransactionContext, normalize_transactions
 from src.ingestion.ocr_parser import OCRExtractionError
+from src.model.loader import (
+    ModelArtifactError,
+    ModelArtifactNotFoundError,
+    resolve_model_path,
+)
+from src.application.assessment import AssessmentError
+from src.storage.assessment_store import AssessmentPersistenceError
 from src.ui.components import (
     render_failure_panel,
     render_metric_rows,
     render_page_header,
     render_panel_heading,
     render_step_bar,
+    render_score_panel,
+    render_factor_list,
     render_validation_counters,
 )
 from src.ui.services import (
@@ -26,7 +38,12 @@ from src.ui.services import (
     parse_receipt_upload,
     parse_sms_records,
     read_csv_records,
+    localize_assessment,
+    run_assessment,
+    save_assessment,
+    save_human_decision,
 )
+from src.ui.state import Route, navigate, reset_assessment
 
 
 SOURCE_OPTIONS: Final[dict[str, str]] = {
@@ -395,18 +412,275 @@ def _render_validation_step() -> None:
                 st.rerun()
 
 
-def _render_assessment_placeholder() -> None:
-    with st.container(border=True):
-        render_panel_heading(
-            "Run assessment", f"Member {st.session_state.applicant_id}"
-        )
-        st.info(
-            "Validated features are ready. Model execution and the explained result "
-            "panel are added in the next implementation phase."
-        )
-        if st.button("Back to validation"):
-            st.session_state.assessment_step = 2
+def _render_model_setup_error() -> None:
+    render_failure_panel(
+        "The local scoring model is not available",
+        "Run the documented training command before starting the model assessment. "
+        "AkibaAI will not train a model implicitly from this screen.",
+        technical=f"Expected model artifact: {resolve_model_path()}",
+    )
+    st.code("python -m src.model.run_training", language="bash")
+
+
+def _language_control() -> None:
+    result = st.session_state.assessment_result
+    language_label = st.radio(
+        "Explanation language",
+        ("English", "Kiswahili"),
+        horizontal=True,
+        key="narrative_language_widget",
+    )
+    language = "en" if language_label == "English" else "sw"
+    if language != st.session_state.narrative_language:
+        try:
+            st.session_state.assessment_result = localize_assessment(result, language)
+        except (TypeError, ValueError) as exc:
+            st.session_state.last_error = str(exc)
+        else:
+            st.session_state.narrative_language = language
             st.rerun()
+
+
+def _render_explanation(result: object) -> None:
+    narrative = result.narrative
+    st.markdown("#### Explanation")
+    st.write(narrative.summary)
+    first, second = st.columns(2, gap="large")
+    with first:
+        render_factor_list(
+            "Factors increasing estimated risk",
+            narrative.increasing_risk_factors,
+            direction_label="Increases risk",
+        )
+    with second:
+        render_factor_list(
+            "Factors reducing estimated risk",
+            narrative.reducing_risk_factors,
+            direction_label="Reduces risk",
+        )
+    st.markdown(
+        f'<div class="ak-responsible-note">{escape(narrative.disclaimer)}<br>'
+        "The model supports human review. It does not automatically determine "
+        "the lending decision.</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def _session_history_record(result: object, score_id: int) -> dict[str, object]:
+    return {
+        "applicant": result.applicant_id,
+        "assessed": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "model": result.model_version,
+        "risk_score": result.risk_score,
+        "decision": None,
+        "rationale": "",
+        "score_id": score_id,
+    }
+
+
+def _persist_current_assessment() -> None:
+    if st.session_state.assessment_saved:
+        return
+    persisted = save_assessment(st.session_state.assessment_result)
+    st.session_state.persisted_assessment = persisted
+    st.session_state.assessment_saved = True
+    history = list(st.session_state.session_history)
+    history.append(
+        _session_history_record(st.session_state.assessment_result, persisted.score_id)
+    )
+    st.session_state.session_history = history
+
+
+def _render_assessment_result() -> None:
+    result = st.session_state.assessment_result
+    left, right = st.columns([1, 2], gap="large")
+    with left:
+        render_score_panel(result.risk_score, result.model_version)
+    with right:
+        _language_control()
+        _render_explanation(result)
+
+
+def _render_assessment_step() -> None:
+    result = st.session_state.assessment_result
+    if result is None:
+        with st.container(border=True):
+            render_panel_heading(
+                "Run model assessment", f"Member {st.session_state.applicant_id}"
+            )
+            st.caption(
+                "The local model will score the validated feature row and generate "
+                "a traceable explanation. No lending decision is made here."
+            )
+            if not resolve_model_path().is_file():
+                _render_model_setup_error()
+            elif st.button(
+                "Run model assessment",
+                type="primary",
+                use_container_width=True,
+            ):
+                try:
+                    with st.spinner("Generating local assessment…"):
+                        st.session_state.assessment_result = run_assessment(
+                            st.session_state.normalization_result,
+                            str(st.session_state.applicant_id),
+                            st.session_state.applicants_df,
+                        )
+                except (
+                    ModelArtifactNotFoundError,
+                    ModelArtifactError,
+                    AssessmentError,
+                    RuntimeError,
+                ) as exc:
+                    st.session_state.last_error = str(exc)
+                else:
+                    st.session_state.last_error = None
+                    st.rerun()
+            if st.button("Back to validation"):
+                st.session_state.assessment_step = 2
+                st.rerun()
+            if st.session_state.last_error:
+                render_failure_panel(
+                    "The model assessment could not be completed",
+                    "The validated evidence is unchanged. Check the local model setup "
+                    "and try again.",
+                    technical=str(st.session_state.last_error),
+                )
+        return
+
+    _render_assessment_result()
+    st.divider()
+    with st.container(border=True):
+        render_panel_heading("Save model assessment", "Local storage")
+        st.caption(
+            "Saving records the feature payload, score, explanation, and current "
+            "language narrative. It does not record an officer decision."
+        )
+        if st.session_state.assessment_saved:
+            st.success("Assessment saved locally.")
+        elif st.button(
+            "Save assessment",
+            type="primary",
+            use_container_width=True,
+        ):
+            try:
+                with st.spinner("Saving assessment locally…"):
+                    _persist_current_assessment()
+            except (
+                AssessmentPersistenceError,
+                sqlite3.DatabaseError,
+                OSError,
+                RuntimeError,
+            ) as exc:
+                render_failure_panel(
+                    "The assessment was not saved",
+                    "Local storage could not complete the request. No officer "
+                    "decision has been recorded.",
+                    technical=str(exc),
+                )
+            else:
+                st.session_state.assessment_step = 4
+                st.rerun()
+
+
+def _update_history_decision(decision: str, rationale: str) -> None:
+    score_id = st.session_state.persisted_assessment.score_id
+    history = list(st.session_state.session_history)
+    for record in history:
+        if record.get("score_id") == score_id:
+            record["decision"] = decision.title()
+            record["rationale"] = rationale
+            break
+    st.session_state.session_history = history
+
+
+def _record_current_decision() -> None:
+    if st.session_state.decision_saved:
+        return
+    decision = st.session_state.decision_value
+    if not decision:
+        raise UIInputError("Select an officer decision before recording it.")
+    rationale = st.session_state.decision_rationale.strip()
+    decision_id = save_human_decision(
+        str(st.session_state.applicant_id), decision, rationale
+    )
+    st.session_state.decision_id = decision_id
+    st.session_state.decision_saved = True
+    _update_history_decision(decision, rationale)
+
+
+def _render_decision_step() -> None:
+    result = st.session_state.assessment_result
+    if result is None or not st.session_state.assessment_saved:
+        st.session_state.assessment_step = 3
+        st.rerun()
+        return
+
+    summary, decision_panel = st.columns([1, 1.7], gap="large")
+    with summary:
+        render_score_panel(result.risk_score, result.model_version)
+        st.caption("Assessment saved locally. The officer decision remains separate.")
+    with decision_panel:
+        with st.container(border=True):
+            render_panel_heading("Officer decision", "Human judgment")
+            st.caption(
+                "Choose independently after reviewing the model explanation and any "
+                "additional documentation or context."
+            )
+            st.radio(
+                "Decision",
+                ("APPROVE", "REVIEW", "DECLINE"),
+                index=None,
+                format_func=str.title,
+                key="decision_value",
+                disabled=st.session_state.decision_saved,
+            )
+            st.text_area(
+                "Rationale",
+                key="decision_rationale",
+                placeholder=(
+                    "Record the reason, including additional evidence considered…"
+                ),
+                disabled=st.session_state.decision_saved,
+            )
+            if st.session_state.decision_saved:
+                st.success("Decision recorded.")
+            elif st.button(
+                "Record decision",
+                type="primary",
+                use_container_width=True,
+            ):
+                try:
+                    with st.spinner("Recording officer decision…"):
+                        _record_current_decision()
+                except (
+                    UIInputError,
+                    ValueError,
+                    sqlite3.DatabaseError,
+                    OSError,
+                    RuntimeError,
+                ) as exc:
+                    render_failure_panel(
+                        "The decision was not recorded",
+                        str(exc),
+                    )
+                else:
+                    st.rerun()
+
+    with st.expander("Review saved assessment explanation"):
+        _language_control()
+        _render_explanation(st.session_state.assessment_result)
+
+    if st.session_state.decision_saved:
+        first, second = st.columns(2)
+        with first:
+            if st.button("Start new assessment", use_container_width=True):
+                reset_assessment()
+                st.rerun()
+        with second:
+            if st.button("View session history", use_container_width=True):
+                navigate(Route.HISTORY)
+                st.rerun()
 
 
 def render_new_assessment() -> None:
@@ -426,5 +700,7 @@ def render_new_assessment() -> None:
         _render_transaction_step()
     elif step == 2:
         _render_validation_step()
+    elif step == 3:
+        _render_assessment_step()
     else:
-        _render_assessment_placeholder()
+        _render_decision_step()

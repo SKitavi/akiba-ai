@@ -50,6 +50,7 @@ ASSESSMENT_WIDGET_KEYS: Final[tuple[str, ...]] = (
     "sms_input_widget",
     "receipt_upload_widget",
     "receipt_type_widget",
+    "narrative_language_widget",
 )
 
 _DEFAULTS: Final[dict[str, object]] = {

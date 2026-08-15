@@ -277,6 +277,112 @@ body,
   font-weight: 500;
 }
 
+.ak-score-panel {
+  background: var(--ak-surface);
+  border: 1px solid var(--ak-border);
+  border-radius: var(--ak-radius-md);
+  padding: 1.15rem 1.25rem;
+}
+
+.ak-score-value {
+  color: var(--ak-ink-900);
+  font-family: "Roboto Mono", Consolas, monospace;
+  font-size: 2.1rem;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+  margin: 0.2rem 0 0.85rem;
+}
+
+.ak-score-track {
+  background: #dde3e8;
+  height: 5px;
+  margin: 0 0.15rem;
+  position: relative;
+}
+
+.ak-score-track span {
+  background: var(--ak-navy-800);
+  border: 2px solid var(--ak-surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--ak-navy-800);
+  height: 12px;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+}
+
+.ak-score-ends {
+  color: var(--ak-muted);
+  display: flex;
+  font-family: "Roboto Mono", Consolas, monospace;
+  font-size: 0.7rem;
+  justify-content: space-between;
+  margin-top: 0.35rem;
+}
+
+.ak-score-panel p {
+  color: var(--ak-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin: 0.9rem 0 0.65rem;
+  max-width: 60ch;
+}
+
+.ak-score-model {
+  border-top: 1px solid var(--ak-border);
+  color: var(--ak-muted);
+  font-family: "Roboto Mono", Consolas, monospace;
+  font-size: 0.7rem;
+  padding-top: 0.65rem;
+}
+
+.ak-factor-list {
+  border-bottom: 1px solid var(--ak-border);
+}
+
+.ak-factor-row {
+  align-items: flex-start;
+  border-top: 1px solid var(--ak-border);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.72rem 0;
+}
+
+.ak-factor-row strong {
+  color: var(--ak-ink-900);
+  font-size: 0.84rem;
+}
+
+.ak-factor-row p {
+  color: var(--ak-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: 0.18rem 0 0;
+}
+
+.ak-factor-row > span {
+  color: var(--ak-muted);
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  margin-top: 0.1rem;
+  text-transform: uppercase;
+}
+
+.ak-responsible-note {
+  background: var(--ak-subtle);
+  border-left: 3px solid var(--ak-link);
+  color: var(--ak-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin-top: 0.9rem;
+  padding: 0.75rem 0.9rem;
+}
+
 [data-testid="stButton"] button,
 [data-testid="stFormSubmitButton"] button,
 [data-baseweb="select"] > div,

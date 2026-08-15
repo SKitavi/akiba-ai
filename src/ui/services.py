@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from contextlib import closing
+from dataclasses import dataclass, replace
 from io import BytesIO
 from pathlib import Path
 import random
@@ -21,6 +22,19 @@ from src.features.build_features import FEATURE_COLUMNS, build_feature_table
 from src.ingestion.normalization import NormalizationResult
 from src.ingestion.ocr_parser import extract_text_from_image, parse_transaction_text
 from src.ingestion.sms_parser import parse_sms_message
+from src.application.assessment import AssessmentResult, assess_applicant
+from src.model.loader import ModelBundle, load_model_bundle
+from src.storage.assessment_store import (
+    HumanDecision,
+    PersistedAssessment,
+    persist_assessment,
+    record_human_decision,
+)
+from src.storage.db import get_connection, initialize_schema
+from src.xai.narratives import generate_risk_narrative
+
+
+_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "storage" / "schema.sql"
 
 
 class UIInputError(ValueError):
@@ -126,3 +140,58 @@ def build_feature_preview(
     if any(feature not in row.index for feature in FEATURE_COLUMNS):
         raise UIInputError("The financial summary is missing required model inputs.")
     return row
+
+
+@st.cache_resource(show_spinner=False)
+def load_cached_model_bundle(model_path: str | None = None) -> ModelBundle:
+    """Load and validate the local model once per Streamlit server process."""
+    return load_model_bundle(model_path)
+
+
+def run_assessment(
+    normalization: NormalizationResult,
+    applicant_id: str,
+    applicants_df: pd.DataFrame | None,
+    language: str = "en",
+) -> AssessmentResult:
+    """Run the canonical assessment service with a cached model bundle."""
+    model_bundle = load_cached_model_bundle()
+    return assess_applicant(
+        normalization.valid_transactions,
+        model_bundle,
+        applicant_id=applicant_id,
+        applicants_df=applicants_df,
+        language=language,
+    )
+
+
+def localize_assessment(
+    assessment: AssessmentResult,
+    language: str,
+) -> AssessmentResult:
+    """Regenerate only the backend-owned narrative in the requested language."""
+    narrative = generate_risk_narrative(assessment.explanation, language=language)
+    return replace(assessment, narrative=narrative)
+
+
+def save_assessment(assessment: AssessmentResult) -> PersistedAssessment:
+    """Initialize local storage and persist one assessment atomically."""
+    with closing(get_connection()) as connection:
+        initialize_schema(connection, _SCHEMA_PATH)
+        return persist_assessment(connection, assessment)
+
+
+def save_human_decision(
+    applicant_id: str,
+    decision: HumanDecision | str,
+    rationale: str | None,
+) -> int:
+    """Persist an officer's decision through the backend decision boundary."""
+    with closing(get_connection()) as connection:
+        initialize_schema(connection, _SCHEMA_PATH)
+        return record_human_decision(
+            connection,
+            applicant_id,
+            decision,
+            rationale,
+        )

@@ -9,6 +9,7 @@ import streamlit as st
 
 from src.model.loader import resolve_model_path
 from src.ui.state import ROUTE_LABELS, Route
+from src.xai.narratives import NarrativeFactor
 
 
 _THEME_PATH = Path(__file__).with_name("theme.css")
@@ -183,3 +184,49 @@ def render_metric_rows(rows: tuple[tuple[str, str], ...]) -> None:
         for label, value in rows
     )
     st.markdown(f'<div class="ak-metric-list">{body}</div>', unsafe_allow_html=True)
+
+
+def render_score_panel(risk_score: float, model_version: str) -> None:
+    """Render a neutral model output without invented policy thresholds."""
+    position = max(0.0, min(1.0, risk_score)) * 100
+    st.markdown(
+        '<section class="ak-score-panel" aria-label="Model risk score">'
+        '<div class="ak-overline">Model risk score</div>'
+        f'<div class="ak-score-value">{risk_score:.3f}</div>'
+        '<div class="ak-score-track" aria-hidden="true">'
+        f'<span style="left: {position:.1f}%"></span></div>'
+        '<div class="ak-score-ends"><span>0.0</span><span>1.0</span></div>'
+        "<p>Higher values indicate greater model-estimated risk. This score "
+        "supports human review and does not determine the lending decision.</p>"
+        f'<div class="ak-score-model">Model version · {escape(model_version)}</div>'
+        "</section>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_factor_list(
+    title: str,
+    factors: tuple[NarrativeFactor, ...],
+    *,
+    direction_label: str,
+) -> None:
+    """Render backend-ranked localized factors with accessible direction words."""
+    st.markdown(f"#### {title}")
+    if not factors:
+        st.caption("No material factors were returned in this direction.")
+        return
+    items = "".join(
+        '<div class="ak-factor-row">'
+        f"<div><strong>{escape(factor.feature_label)}</strong>"
+        f"<p>{escape(factor.text)}</p></div>"
+        f"<span>{escape(direction_label)}</span>"
+        "</div>"
+        for factor in factors
+    )
+    st.markdown(f'<div class="ak-factor-list">{items}</div>', unsafe_allow_html=True)
+    with st.expander(f"Technical details · {title.lower()}"):
+        for factor in factors:
+            st.code(
+                f"{factor.feature_name}: value={factor.feature_value:.4g}, "
+                f"SHAP={factor.shap_value:+.4g} ({factor.direction.value})"
+            )
