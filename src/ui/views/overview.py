@@ -17,9 +17,9 @@ def render_overview() -> None:
     """Render honest current-session activity without invented analytics."""
     render_page_header(
         "Credit assessment workspace",
-        "Review mobile-money behaviour with a local model, explain its output, "
-        "and record an independent officer decision.",
-        eyebrow="Branch workstation · local processing",
+        "Validate applicant evidence, review an explained model score, and record "
+        "an independent officer decision.",
+        eyebrow="Local branch workspace",
     )
 
     action, note = st.columns([1, 3], vertical_alignment="center")
@@ -34,7 +34,7 @@ def render_overview() -> None:
             st.rerun()
     with note:
         st.caption(
-            "Demo environment · Synthetic data only · No internet connection required"
+            "Synthetic demonstration data · Processing stays on this workstation"
         )
 
     history = list(st.session_state.session_history)
@@ -71,13 +71,6 @@ def render_overview() -> None:
                     hide_index=True,
                     use_container_width=True,
                 )
-
-    with st.container(border=True):
-        render_panel_heading("How AkibaAI supports review")
-        first, second, third = st.columns(3)
-        first.markdown("**1 · Validate evidence**\n\nMalformed records remain visible.")
-        second.markdown("**2 · Explain the score**\n\nFactors accompany every result.")
-        third.markdown("**3 · Keep judgment human**\n\nNo outcome is preselected.")
 
     if history and st.button("Open session history", key="overview_history"):
         navigate(Route.HISTORY)

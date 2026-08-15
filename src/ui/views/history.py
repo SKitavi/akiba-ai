@@ -20,11 +20,10 @@ def render_history() -> None:
 
     history = list(st.session_state.session_history)
     if not history:
-        with st.container(border=True):
-            render_empty_state(
-                "No session history",
-                "Saved assessments will appear here after you complete the workflow.",
-            )
+        render_empty_state(
+            "No session history",
+            "Saved assessments will appear here after you complete the workflow.",
+        )
         if st.button("Start new assessment", type="primary", key="history_start"):
             reset_assessment()
             st.rerun()

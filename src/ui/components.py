@@ -37,7 +37,7 @@ def render_app_bar() -> None:
         st.markdown(
             '<div class="ak-brand" aria-label="AkibaAI">'
             '<span class="ak-brand-name">AkibaAI</span>'
-            '<span class="ak-brand-product">Credit assessment</span>'
+            '<span class="ak-brand-product">Credit operations</span>'
             "</div>",
             unsafe_allow_html=True,
         )
@@ -56,7 +56,7 @@ def render_app_bar() -> None:
     with status:
         st.markdown(
             '<div class="ak-status-cluster">'
-            '<span class="ak-local-status"><span aria-hidden="true">●</span> Local mode</span>'
+            '<span class="ak-local-status"><span aria-hidden="true">●</span> Local processing</span>'
             '<span class="ak-demo-chip">Synthetic data</span>'
             f'<span class="ak-model-status">{escape(_model_status())}</span>'
             "</div>",
@@ -109,21 +109,19 @@ def render_panel_heading(title: str, meta: str | None = None) -> None:
 
 
 def render_step_bar(current_step: int) -> None:
-    """Render the compact assessment progress indicator."""
+    """Render conventional workflow tabs with one active step."""
     labels = ("Applicant", "Transactions", "Validation", "Assessment", "Decision")
     items = []
     for index, label in enumerate(labels):
         if index < current_step:
             state_class = "complete"
-            marker = "✓"
         elif index == current_step:
             state_class = "current"
-            marker = str(index + 1)
         else:
             state_class = "upcoming"
-            marker = str(index + 1)
         items.append(
-            f'<span class="ak-step {state_class}"><b>{marker}</b>{escape(label)}</span>'
+            f'<span class="ak-step {state_class}"><b>{index + 1}</b>'
+            f"{escape(label)}</span>"
         )
     st.markdown(
         '<nav class="ak-step-bar" aria-label="Assessment progress">'
@@ -139,7 +137,6 @@ def render_failure_panel(
     """Render a calm failure state with optional developer detail."""
     st.markdown(
         '<div class="ak-failure-panel">'
-        '<div class="ak-overline">Action needed</div>'
         f'<div class="ak-failure-title">{escape(title)}</div>'
         f'<div class="ak-failure-copy">{escape(message)}</div>'
         "</div>",
@@ -163,16 +160,17 @@ def render_validation_counters(
         ("Rejected", rejected, "attention" if rejected else "neutral"),
         ("Warnings", warnings, "attention" if warnings else "neutral"),
     )
-    columns = st.columns(4, gap="small")
-    for column, (label, value, tone) in zip(columns, values):
-        with column:
-            st.markdown(
-                f'<div class="ak-counter {tone}">'
-                f'<span class="ak-counter-label">{label}</span>'
-                f"<strong>{value:,}</strong>"
-                "</div>",
-                unsafe_allow_html=True,
-            )
+    counters = "".join(
+        f'<div class="ak-counter {tone}">'
+        f'<span class="ak-counter-label">{label}</span>'
+        f"<strong>{value:,}</strong>"
+        "</div>"
+        for label, value, tone in values
+    )
+    st.markdown(
+        f'<div class="ak-validation-summary">{counters}</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def render_metric_rows(rows: tuple[tuple[str, str], ...]) -> None:
@@ -191,14 +189,14 @@ def render_score_panel(risk_score: float, model_version: str) -> None:
     position = max(0.0, min(1.0, risk_score)) * 100
     st.markdown(
         '<section class="ak-score-panel" aria-label="Model risk score">'
-        '<div class="ak-overline">Model risk score</div>'
+        '<div class="ak-score-label">Model Risk Score</div>'
         f'<div class="ak-score-value">{risk_score:.3f}</div>'
         '<div class="ak-score-track" aria-hidden="true">'
         f'<span style="left: {position:.1f}%"></span></div>'
         '<div class="ak-score-ends"><span>0.0</span><span>1.0</span></div>'
         "<p>Higher values indicate greater model-estimated risk. This score "
         "supports human review and does not determine the lending decision.</p>"
-        f'<div class="ak-score-model">Model version · {escape(model_version)}</div>'
+        f'<div class="ak-score-model">Model version: {escape(model_version)}</div>'
         "</section>",
         unsafe_allow_html=True,
     )
@@ -224,7 +222,7 @@ def render_factor_list(
         for factor in factors
     )
     st.markdown(f'<div class="ak-factor-list">{items}</div>', unsafe_allow_html=True)
-    with st.expander(f"Technical details · {title.lower()}"):
+    with st.expander(f"Technical details — {title.lower()}"):
         for factor in factors:
             st.code(
                 f"{factor.feature_name}: value={factor.feature_value:.4g}, "

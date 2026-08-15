@@ -100,7 +100,7 @@ def _render_applicant_step() -> None:
             "Synthetic members are generated locally by the repository's existing "
             "demo-data pipeline. No real customer data is included."
         )
-        with st.form("applicant_form"):
+        with st.form("applicant_form", border=False):
             if mode == "Synthetic demo member":
                 applicant_ids = dataset.applicants["applicant_id"].astype(str).tolist()
                 applicant_id = st.selectbox(
@@ -261,7 +261,7 @@ def _render_transaction_step() -> None:
         )
         _render_source_input(source_key)
 
-        previous, validate = st.columns([1, 3])
+        _, previous, validate = st.columns([5, 1.2, 2])
         with previous:
             if st.button("Back", use_container_width=True):
                 st.session_state.assessment_step = 0
@@ -396,7 +396,7 @@ def _render_validation_step() -> None:
             )
             _render_financial_preview(st.session_state.feature_preview)
 
-        previous, proceed = st.columns([1, 3])
+        _, previous, proceed = st.columns([5, 1.35, 2.2])
         with previous:
             if st.button("Back to evidence", use_container_width=True):
                 st.session_state.assessment_step = 1
@@ -514,31 +514,38 @@ def _render_assessment_step() -> None:
             )
             if not resolve_model_path().is_file():
                 _render_model_setup_error()
-            elif st.button(
-                "Run model assessment",
-                type="primary",
-                use_container_width=True,
-            ):
-                try:
-                    with st.spinner("Generating local assessment…"):
-                        st.session_state.assessment_result = run_assessment(
-                            st.session_state.normalization_result,
-                            str(st.session_state.applicant_id),
-                            st.session_state.applicants_df,
-                        )
-                except (
-                    ModelArtifactNotFoundError,
-                    ModelArtifactError,
-                    AssessmentError,
-                    RuntimeError,
-                ) as exc:
-                    st.session_state.last_error = str(exc)
-                else:
-                    st.session_state.last_error = None
+                if st.button("Back to validation"):
+                    st.session_state.assessment_step = 2
                     st.rerun()
-            if st.button("Back to validation"):
-                st.session_state.assessment_step = 2
-                st.rerun()
+            else:
+                _, previous, run = st.columns([5, 1.4, 2.3])
+                with previous:
+                    if st.button("Back", use_container_width=True):
+                        st.session_state.assessment_step = 2
+                        st.rerun()
+                with run:
+                    if st.button(
+                        "Run model assessment",
+                        type="primary",
+                        use_container_width=True,
+                    ):
+                        try:
+                            with st.spinner("Generating local assessment…"):
+                                st.session_state.assessment_result = run_assessment(
+                                    st.session_state.normalization_result,
+                                    str(st.session_state.applicant_id),
+                                    st.session_state.applicants_df,
+                                )
+                        except (
+                            ModelArtifactNotFoundError,
+                            ModelArtifactError,
+                            AssessmentError,
+                            RuntimeError,
+                        ) as exc:
+                            st.session_state.last_error = str(exc)
+                        else:
+                            st.session_state.last_error = None
+                            st.rerun()
             if st.session_state.last_error:
                 render_failure_panel(
                     "The model assessment could not be completed",
@@ -561,7 +568,6 @@ def _render_assessment_step() -> None:
         elif st.button(
             "Save assessment",
             type="primary",
-            use_container_width=True,
         ):
             try:
                 with st.spinner("Saving assessment locally…"):
@@ -648,7 +654,6 @@ def _render_decision_step() -> None:
             elif st.button(
                 "Record decision",
                 type="primary",
-                use_container_width=True,
             ):
                 try:
                     with st.spinner("Recording officer decision…"):
