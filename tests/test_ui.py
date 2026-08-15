@@ -65,7 +65,11 @@ def _has_markdown(app: AppTest, text: str) -> bool:
     return any(text.lower() in str(item.value).lower() for item in app.markdown)
 
 
-def test_application_loads_and_default_navigation_works() -> None:
+def test_application_loads_and_default_navigation_works(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "navigation.db"))
     app = AppTest.from_file(_APP_PATH, default_timeout=30).run()
 
     assert not app.exception

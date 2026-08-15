@@ -13,6 +13,13 @@ pip install -r requirements.txt
 streamlit run src/ui/app.py
 ```
 
+To populate the local dashboard with 12 clearly labelled synthetic assessment
+records, run this command once (it is safe to rerun):
+
+```bash
+python -m src.storage.seed_dashboard_demo
+```
+
 ## Synthetic Data Disclaimer
 
 > This project uses **synthetic data only**, not real customer data.

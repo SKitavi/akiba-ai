@@ -22,6 +22,7 @@ _SOURCE_LABELS = {
     "csv": "CSV upload",
     "sms": "SMS messages",
     "receipt": "Receipt image",
+    "dashboard_demo": "Dashboard demo",
 }
 
 
