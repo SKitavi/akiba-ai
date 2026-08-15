@@ -29,7 +29,7 @@ Many SACCO applicants and informal workers have limited conventional credit hist
 - Balance direction over time
 - Mix of productive payments, cash withdrawals, airtime, and peer transfers
 
-The intended output is a risk score between `0` and `1`, where a larger value means a higher estimated probability of default.
+The intended output is a model risk score between `0` and `1`, where a larger value means the model estimates greater default risk. It is not independently probability-calibrated.
 
 This repository only demonstrates the engineering and modeling concept. It does not establish that these signals are valid, fair, lawful, or sufficiently predictive for real lending.
 
@@ -70,7 +70,7 @@ Synthetic M-Pesa / MTN MoMo transactions and SMS messages
                                       (unfinished)
 ```
 
-The implemented training path operates directly on the structured synthetic transaction data. The OCR/SMS parser is tested separately but is not yet connected to feature engineering as a complete production ingestion path.
+Structured synthetic records and supported M-Pesa/MTN SMS formats now pass through a typed normalization boundary before feature engineering. Records missing required financial fields are rejected with structured reasons rather than receiving fabricated values. Generic OCR receipts may still require explicit caller-supplied transaction context.
 
 ## 4. Repository map
 
@@ -86,12 +86,15 @@ akiba-ai/
 |   `-- samples/                      Sample receipt PNG files
 |-- docs/
 |   |-- data_schema.md                Synthetic dataset specification
+|   |-- BACKEND_INTEGRATION.md        Complete backend architecture and APIs
 |   `-- architecture.png              Current placeholder architecture image
 |-- models/                           Generated model/evaluation artifacts
 |-- reports/                          Generated reports
 |-- src/
+|   |-- application/                  Applicant assessment orchestration
 |   |-- data_gen/                     Synthetic data and labels
-|   |-- ingestion/                    SMS parsing, OCR, receipt generation
+|   |-- domain/                       Canonical transaction domain models
+|   |-- ingestion/                    Parsing, OCR, normalization, validation
 |   |-- features/                     Applicant-level feature engineering
 |   |-- model/                        Training, orchestration, prediction
 |   |-- eval/                         Classification metrics
@@ -293,7 +296,9 @@ The parser returns:
 
 It recognizes M-Pesa and MTN MoMo currency/provider markers and uses regular expressions for IDs, amounts, fees, balances, and counterparties.
 
-Important integration gap: this result does not include all fields required by feature engineering. In particular, the parser does not consistently return `applicant_id`, `timestamp`, `tx_type`, `amount`, and `post_balance` under the feature builder's names. A normalization stage still needs to infer transaction type and timestamp, attach an applicant, rename `balance` to `post_balance`, validate the record, and handle parsing failures.
+The parser now extracts timestamps and transaction types from supported provider wording. `src/ingestion/normalization.py` then validates applicant association, provider, timestamp, canonical type, positive amount, and non-negative post-balance before creating an immutable `NormalizedTransaction`. Batch results expose valid records, indexed rejections, warnings, and processing counts.
+
+The structured synthetic CSV path is the guaranteed demo path. A generic receipt that does not identify its transaction type is rejected unless the caller supplies that missing context explicitly. The real OCR path raises an extraction error when Tesseract is unavailable; only the explicitly synthetic OCR stub may request mock receipt text.
 
 ## 10. Feature engineering
 
@@ -380,13 +385,15 @@ The `applicant_id` identifier is retained in the feature table but excluded from
 
 `src/model/run_training.py` adds a separate 20% holdout set around that process. Cross-validation occurs only on the 80% training partition, and the saved model is then scored on the holdout partition.
 
+`src/model/loader.py` centralizes artifact loading. It resolves an explicit path before `MODEL_PATH` and the documented default, loads optional sidecar metadata, exposes the model version, and validates stored feature names/counts against the canonical 32-feature schema. Legacy artifacts without metadata receive version `unknown`; no version is guessed from a filename.
+
 ## 12. Prediction
 
 `score_applicant()` in `src/model/predict.py` loads a saved XGBoost artifact and validates that all 32 model features are present.
 
 For one feature row it returns that applicant's positive-class probability. If multiple rows are passed, it returns the mean predicted probability, which is described as an ensembling convenience.
 
-The code calls this a calibrated probability of default, but no calibration algorithm such as isotonic regression or Platt scaling is implemented. The value is currently the raw XGBoost class probability and should be described as a model risk score until calibration is added and validated.
+The value is the raw XGBoost positive-class output. The public scoring and assessment APIs describe it as a model risk score because no calibration algorithm such as isotonic regression or Platt scaling has been implemented and validated.
 
 ## 13. Evaluation
 
@@ -408,13 +415,16 @@ The custom ROC-AUC implementation returns `0.0` if a test set contains only one 
 
 ## 14. SQLite persistence
 
-`src/storage/schema.sql` defines three append-only tables:
+`src/storage/schema.sql` defines four append-only tables:
 
 - `features`: applicant ID, JSON feature payload, timestamp
 - `scores`: applicant ID, risk score, model version, timestamp
+- `explanations`: model version, structured SHAP payload, language, narrative payload, timestamp
 - `decisions`: applicant ID, decision label, rationale, timestamp
 
-`src/storage/db.py` provides connection, schema initialization, and insert helpers.
+`src/storage/db.py` provides configuration-aware connection, schema initialization, and insert helpers. `src/storage/assessment_store.py` writes features, score, explanation, and narrative in one SQLite transaction, rolling back the complete operation if any required write fails.
+
+Human decisions are stored through a separate validated operation supporting `APPROVE`, `REVIEW`, and `DECLINE`. These are values selected by an authorized person; the model never chooses or derives them.
 
 The current schema is intentionally minimal. It has no applicant table, foreign keys, uniqueness constraints, model registry, consent/audit records, ingestion records, or update/version policies. It is not encrypted; SQLCipher is explicitly outside the current MVP scope.
 
@@ -430,14 +440,16 @@ Positive contributions move this model toward greater estimated risk, while nega
 
 ## 16. Streamlit dashboard
 
-`src/ui/app.py` is currently a shell. A useful MVP dashboard would need at least:
+`src/ui/app.py` is currently a shell. The backend is no longer expected to live inside Streamlit. Future UI code can normalize input, load one reusable `ModelBundle`, call `assess_applicant()`, render its typed result, and call the storage adapter.
+
+A useful MVP dashboard would still need:
 
 - Applicant selection or creation
 - CSV/SMS/receipt ingestion
 - Parsing and validation feedback
 - Feature summary
 - Model artifact/version selection
-- Risk score with a documented threshold
+- Risk score display without invented policy bands
 - Top positive and negative explanation factors
 - English/Kiswahili narrative selection
 - Human approve/review/decline action
@@ -446,19 +458,24 @@ Positive contributions move this model toward greater estimated risk, while nega
 
 ## 17. Automated tests
 
-The repository contains 47 unit tests across five areas:
+The repository currently has 137 passing tests covering:
 
 - `test_data_generation.py`: phone/ID formats, dataset schema, repeatability, default rate
 - `test_sms_parser.py`: M-Pesa, MTN MoMo, and receipt parsing
 - `test_features.py`: feature values, bounds, edge cases, missing columns
 - `test_storage.py`: schema initialization and SQLite inserts
 - `test_model.py`: training artifacts, metadata, AUC sanity, prediction validation
+- `test_normalization.py`: canonical records, rejection reasons, SMS-to-feature integration, OCR safety
+- `test_model_loader.py`: model artifacts, metadata/version handling, schema compatibility
+- `test_assessment_service.py`: typed English/Kiswahili assessment orchestration and errors
+- `test_assessment_store.py`: atomic persistence, rollback, explanation payloads, human decisions
+- `test_backend_integration.py`: complete synthetic backend golden path
+- XAI/narrative tests: SHAP semantics, ranking, localization, and integration
 
-At the time this guide was created, all source and test files passed Python bytecode compilation. The full test suite could not be executed in the existing environment because `pytest` had not yet been installed. Run `python -m pip install -r requirements.txt` followed by `python -m pytest -q` to obtain the actual test result.
+The full suite passes under the repository's Python 3.10 virtual environment. The remaining warnings are third-party matplotlib/Pyparsing deprecation warnings.
 
 There are currently no tests for:
 
-- End-to-end OCR-to-feature normalization
 - The training orchestrator as a complete command
 - Evaluation edge cases such as empty inputs
 - Streamlit interactions
@@ -506,11 +523,10 @@ For meaningful validation, the model would need consented historical data with o
 
 ### Engineering gaps
 
-- Parsed SMS/OCR output does not directly match the feature schema.
-- The UI, model, explanations, and database are not integrated.
-- There is no central configuration loader for `.env` values.
-- `DB_PATH` and `MODEL_PATH` in `.env.example` are not consumed by the current application.
-- The example `MODEL_PATH=./artifacts/model.json` disagrees with the implemented default under `models/`.
+- The Streamlit shell does not yet call the integrated backend services.
+- Generic OCR receipts may omit transaction type and therefore require explicit context.
+- Configuration reads environment variables but does not parse `.env` files automatically.
+- There is no model registry, caching policy, or database migration framework.
 - Receipt-image generation relies on Pillow without declaring it directly.
 - The architecture image is presently not useful documentation.
 - Model metadata and evaluation JSON files are unintentionally ignored along with model JSON artifacts, despite the `.gitignore` comment suggesting otherwise.
@@ -528,18 +544,17 @@ For meaningful validation, the model would need consented historical data with o
 
 ### Phase 2: Close the ingestion gap
 
-1. Define a canonical normalized transaction model.
-2. Extend parsing to extract timestamp and transaction type.
-3. Add applicant association and validation rules.
-4. Record parse confidence, warnings, and rejected records.
-5. Add end-to-end tests from raw SMS and receipt images to feature rows.
+1. Add confidence metadata if OCR/SMS acceptance policy later requires it.
+2. Extend only explicitly supported provider message formats.
+3. Add UI feedback for valid, rejected, and warning counts.
+4. Obtain caller context for receipts that omit transaction type.
 
 ### Phase 3: Implement scoring and explanations
 
-1. Add a model loader that also validates metadata/version.
-2. Integrate the implemented SHAP explanation and localized narratives into the UI.
+1. Integrate `load_model_bundle()` and `assess_applicant()` into the UI.
+2. Cache the loaded bundle at the UI boundary if needed.
 3. Define score bands and thresholds only when an explicit SACCO policy exists.
-4. Clearly label raw model scores unless calibration is implemented.
+4. Continue labeling raw model outputs as risk scores unless calibration is implemented.
 
 ### Phase 4: Build the integrated dashboard
 
@@ -586,11 +601,15 @@ The MVP can be considered integrated when:
 | Run tests | `python -m pytest -q` |
 | Generate data code | `src/data_gen/generate_synthetic_data.py` |
 | Parse SMS/OCR | `src/ingestion/ocr_parser.py` |
+| Normalize transactions | `src/ingestion/normalization.py` |
 | Build features | `src/features/build_features.py` |
 | Train model | `src/model/train.py` |
+| Load model bundle | `src/model/loader.py` |
 | Score applicant | `src/model/predict.py` |
+| Assess applicant | `src/application/assessment.py` |
 | Evaluate model | `src/eval/metrics.py` |
 | SQLite helpers | `src/storage/db.py` |
+| Persist assessment/decision | `src/storage/assessment_store.py` |
 | Database schema | `src/storage/schema.sql` |
 | Explain one score | `src/xai/shap_explainer.py` |
 | Generate localized narrative | `src/xai/narratives.py` |
@@ -598,6 +617,6 @@ The MVP can be considered integrated when:
 
 ## 23. Final perspective
 
-AkibaAI has a solid educational backend for demonstrating an offline alternative-credit pipeline. Its strongest implemented areas are synthetic data generation, feature engineering, basic XGBoost training, evaluation, SHAP explainability, localized narratives, and unit-test coverage. Its most important unfinished work is integration: turning parsed inputs into normalized transactions, connecting the reusable scoring/explanation APIs to persistence, and providing a usable dashboard.
+AkibaAI now has an integrated, Streamlit-independent educational backend: canonical normalization, feature engineering, validated model loading, scoring, SHAP, localized narratives, typed assessment results, atomic persistence, and separate human decisions. The most important unfinished work is a usable dashboard plus the governance, security, real-data validation, and operating controls required beyond an academic MVP.
 
 Treat the current model as a software-pipeline demonstration. The synthetic evaluation cannot support real credit decisions, and the code needs substantial validation, governance, privacy, security, fairness, and operational work before any real-data pilot.
