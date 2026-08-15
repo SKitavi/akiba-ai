@@ -31,8 +31,9 @@ models/*.bin
 models/*.ubj
 !models/.gitkeep
 
-# Streamlit local config/state
-.streamlit/
+# Streamlit local state (keep the shared visual configuration)
+.streamlit/*
+!.streamlit/config.toml
 
 # Editor/OS
 .DS_Store
