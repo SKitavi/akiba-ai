@@ -14,6 +14,12 @@ env/
 # Local env/config
 .env
 
+# Internal implementation/status reports (kept outside production Git history)
+PROJECT_GUIDE.md
+docs/BACKEND_INTEGRATION.md
+docs/SHAP_NARRATIVES_IMPLEMENTATION.md
+docs/UI_IMPLEMENTATION.md
+
 # Databases and reports artifacts
 *.db
 *.sqlite
@@ -25,14 +31,18 @@ reports/*
 data/raw/*
 !data/raw/.gitkeep
 
-# Generated model artifacts and metadata (kept local)
+# Generated model artifacts and metadata (keep only the reviewed demo model)
 models/*.json
 models/*.bin
 models/*.ubj
 !models/.gitkeep
+!models/xgb_v1.json
+!models/xgb_v1.meta.json
+!models/xgb_v1.eval.json
 
-# Streamlit local config/state
-.streamlit/
+# Streamlit local state (keep the shared visual configuration)
+.streamlit/*
+!.streamlit/config.toml
 
 # Editor/OS
 .DS_Store

@@ -97,10 +97,17 @@ def test_structured_synthetic_backend_workflow(tmp_path: Path) -> None:
             applicant_id,
             HumanDecision.REVIEW,
             rationale="Human reviewer requested supporting documents.",
+            assessment_id=stored.assessment_id,
         )
         decision = connection.execute(
             "SELECT decision_label FROM decisions"
         ).fetchone()[0]
         assert decision == "REVIEW"
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) FROM assessment_decision_links"
+            ).fetchone()[0]
+            == 1
+        )
     finally:
         connection.close()

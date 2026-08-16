@@ -1,0 +1,17 @@
+services:
+  akiba-ai:
+    build:
+      context: .
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      APP_ENV: production
+      DB_PATH: /app/runtime/akiba_ai.db
+      MODEL_PATH: /app/models/xgb_v1.json
+      SETTINGS_ACCESS_KEY: "${SETTINGS_ACCESS_KEY:-CMU#AB39}"
+    volumes:
+      - akiba_data:/app/runtime
+
+volumes:
+  akiba_data:

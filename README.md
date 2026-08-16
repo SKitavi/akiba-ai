@@ -13,6 +13,32 @@ pip install -r requirements.txt
 streamlit run src/ui/app.py
 ```
 
+To populate the local dashboard with 12 clearly labelled synthetic assessment
+records, run this command once (it is safe to rerun):
+
+```bash
+python -m src.storage.seed_dashboard_demo
+```
+
+The Streamlit **Settings** page can also load the demo records or permanently
+reset all local assessment data after typed confirmation. Resetting preserves
+the model artifacts and application configuration. Its data-management controls
+require the configured `SETTINGS_ACCESS_KEY` (the demo default is `CMU#AB39`).
+
+## Contabo VPS demo
+
+The repository includes a Docker Compose deployment with a persistent SQLite
+volume. On an Ubuntu/Debian VPS with Docker installed:
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+Open `http://YOUR_VPS_IP:8501`. See
+[docs/VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md) for first deployment, updates,
+backups, firewall guidance, and data-reset instructions.
+
 ## Synthetic Data Disclaimer
 
 > This project uses **synthetic data only**, not real customer data.
@@ -24,7 +50,8 @@ streamlit run src/ui/app.py
 - Offline SMS/receipt ingestion stubs
 - Feature engineering stubs for risk scoring
 - Local SQLite storage and model pipeline scaffolding
-- Explainability narrative scaffolding and Streamlit dashboard skeleton
+- Persisted assessment history and operational analytics
+- Explainable English/Kiswahili assessments and a complete Streamlit officer workflow
 
 ### Out of Scope (Stretch Goals)
 - SQLCipher encryption
