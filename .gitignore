@@ -25,11 +25,14 @@ reports/*
 data/raw/*
 !data/raw/.gitkeep
 
-# Generated model artifacts and metadata (kept local)
+# Generated model artifacts and metadata (keep only the reviewed demo model)
 models/*.json
 models/*.bin
 models/*.ubj
 !models/.gitkeep
+!models/xgb_v1.json
+!models/xgb_v1.meta.json
+!models/xgb_v1.eval.json
 
 # Streamlit local state (keep the shared visual configuration)
 .streamlit/*

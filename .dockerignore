@@ -1,0 +1,15 @@
+.git
+.github
+.pytest_cache
+.venv
+venv
+__pycache__
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3
+.env
+data/raw
+notebooks
+reports
+tests

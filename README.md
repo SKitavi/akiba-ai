@@ -22,7 +22,22 @@ python -m src.storage.seed_dashboard_demo
 
 The Streamlit **Settings** page can also load the demo records or permanently
 reset all local assessment data after typed confirmation. Resetting preserves
-the model artifacts and application configuration.
+the model artifacts and application configuration. Its data-management controls
+require the configured `SETTINGS_ACCESS_KEY` (the demo default is `CMU#AB39`).
+
+## Contabo VPS demo
+
+The repository includes a Docker Compose deployment with a persistent SQLite
+volume. On an Ubuntu/Debian VPS with Docker installed:
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+Open `http://YOUR_VPS_IP:8501`. See
+[docs/VPS_DEPLOYMENT.md](docs/VPS_DEPLOYMENT.md) for first deployment, updates,
+backups, firewall guidance, and data-reset instructions.
 
 ## Synthetic Data Disclaimer
 
