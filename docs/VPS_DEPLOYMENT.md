@@ -55,6 +55,14 @@ docker compose ps
 docker compose logs --tail=100 akiba-ai
 ```
 
+If an older image reports `ModuleNotFoundError: No module named 'src'`, pull the
+latest commit and force Compose to recreate the application container:
+
+```bash
+git pull
+docker compose up -d --build --force-recreate
+```
+
 If UFW is enabled, allow the demo port:
 
 ```bash
