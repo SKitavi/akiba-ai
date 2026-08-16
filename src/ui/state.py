@@ -14,12 +14,14 @@ class Route(str, Enum):
     OVERVIEW = "overview"
     ASSESSMENT = "assessment"
     HISTORY = "history"
+    SETTINGS = "settings"
 
 
 ROUTE_LABELS: Final[dict[Route, str]] = {
     Route.OVERVIEW: "Overview",
     Route.ASSESSMENT: "New Assessment",
     Route.HISTORY: "History",
+    Route.SETTINGS: "Settings",
 }
 
 ASSESSMENT_STATE_KEYS: Final[tuple[str, ...]] = (
@@ -89,9 +91,14 @@ def navigate(route: Route) -> None:
 
 def reset_assessment() -> None:
     """Clear workflow state without discarding current-session history."""
+    clear_assessment_workflow()
+    navigate(Route.ASSESSMENT)
+
+
+def clear_assessment_workflow() -> None:
+    """Clear active workflow state without changing the current route."""
     for key in ASSESSMENT_STATE_KEYS:
         default = _DEFAULTS[key]
         st.session_state[key] = default.copy() if isinstance(default, list) else default
     for key in ASSESSMENT_WIDGET_KEYS:
         st.session_state.pop(key, None)
-    navigate(Route.ASSESSMENT)

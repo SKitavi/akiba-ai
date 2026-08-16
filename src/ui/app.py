@@ -8,6 +8,7 @@ from src.ui.components import inject_theme, render_sidebar
 from src.ui.state import Route, initialize_state
 from src.ui.views.history import render_history
 from src.ui.views.overview import render_overview
+from src.ui.views.settings import render_settings
 
 
 def _render_current_route() -> None:
@@ -16,6 +17,8 @@ def _render_current_route() -> None:
         render_overview()
     elif route is Route.HISTORY:
         render_history()
+    elif route is Route.SETTINGS:
+        render_settings()
     else:
         from src.ui.views.new_assessment import render_new_assessment
 

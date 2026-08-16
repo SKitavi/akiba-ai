@@ -14,10 +14,13 @@ import xgboost as xgb
 
 from src.features.build_features import FEATURE_COLUMNS
 from src.ingestion.normalization import TransactionContext, normalize_transactions
+from src.storage.db import get_connection, initialize_schema
+from src.storage.seed_dashboard_demo import seed_dashboard_assessments
 from src.ui.services import UIInputError, parse_sms_records, read_csv_records
 
 
 _APP_PATH = Path(__file__).resolve().parents[1] / "src" / "ui" / "app.py"
+_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "src" / "storage" / "schema.sql"
 
 
 @pytest.fixture(scope="module")
@@ -74,12 +77,50 @@ def test_application_loads_and_default_navigation_works(
 
     assert not app.exception
     button_labels = {button.label for button in app.button}
-    assert {"Overview", "New Assessment", "History"} <= button_labels
+    assert {"Overview", "New Assessment", "History", "Settings"} <= button_labels
     assert _has_markdown(app, "Credit assessment workspace")
 
     _button(app, "History").click().run()
     assert not app.exception
     assert _has_markdown(app, "No persisted history")
+
+
+def test_settings_can_reset_and_reload_demo_data(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "settings.db"
+    monkeypatch.setenv("DB_PATH", str(database_path))
+    connection = get_connection(database_path)
+    try:
+        initialize_schema(connection, _SCHEMA_PATH)
+        seed_dashboard_assessments(connection, count=4)
+    finally:
+        connection.close()
+
+    app = AppTest.from_file(_APP_PATH, default_timeout=30).run()
+    _button(app, "Settings").click().run()
+
+    reset_button = _button(app, "Reset assessment data")
+    assert not app.exception
+    assert reset_button.disabled
+    next(
+        field for field in app.text_input if field.label == "Type RESET to confirm"
+    ).input("RESET").run()
+    _button(app, "Reset assessment data").click().run()
+
+    assert any("Assessment data reset complete" in item.value for item in app.success)
+    with sqlite3.connect(database_path) as database:
+        assert (
+            database.execute("SELECT COUNT(*) FROM assessment_runs").fetchone()[0] == 0
+        )
+
+    _button(app, "Load dashboard demo data").click().run()
+    assert any("Dashboard demo data is ready" in item.value for item in app.success)
+    with sqlite3.connect(database_path) as database:
+        assert (
+            database.execute("SELECT COUNT(*) FROM assessment_runs").fetchone()[0] == 12
+        )
 
 
 def test_demo_validation_reaches_financial_summary() -> None:

@@ -65,8 +65,8 @@ src/ui/
     `-- history.py               current-session saved assessments
 ```
 
-The application uses three task-level destinations: Overview, New Assessment,
-and History. The five assessment steps are Applicant, Transactions, Validation,
+The application uses four task-level destinations: Overview, New Assessment,
+History, and Settings. The five assessment steps are Applicant, Transactions, Validation,
 Assessment, and Decision.
 
 ## Backend integration
@@ -149,6 +149,15 @@ the backend narrative generator, not UI translation.
 The Officer Decision panel is visually and technically separate. Approve, Review,
 and Decline start unselected, and the score never preselects or styles an answer.
 Recording requires an explicit action and supports an officer rationale.
+
+## Settings and local data management
+
+Settings reports exact row counts from local storage. The dashboard-demo action
+idempotently loads 12 clearly labelled synthetic records. Reset requires the user
+to type `RESET`, clears assessment-owned tables in one transaction, resets local
+row identifiers, and clears stale workflow session state. Model artifacts, schema,
+and application configuration are preserved. If any deletion fails, the complete
+reset is rolled back.
 
 ## Error, empty, and loading states
 

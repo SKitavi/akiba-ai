@@ -38,6 +38,15 @@ from src.storage.analytics import (
     list_assessment_history,
 )
 from src.storage.db import get_connection, initialize_schema
+from src.storage.data_management import (
+    AssessmentDataCounts,
+    reset_assessment_data,
+    get_assessment_data_counts,
+)
+from src.storage.seed_dashboard_demo import (
+    DashboardSeedResult,
+    seed_dashboard_assessments,
+)
 from src.xai.narratives import generate_risk_narrative
 
 
@@ -239,3 +248,24 @@ def load_assessment_history(
             limit=limit,
             applicant_query=applicant_query,
         )
+
+
+def load_assessment_data_counts() -> AssessmentDataCounts:
+    """Load exact row counts for the Settings data-management view."""
+    with closing(get_connection()) as connection:
+        initialize_schema(connection, _SCHEMA_PATH)
+        return get_assessment_data_counts(connection)
+
+
+def reset_all_assessment_data() -> AssessmentDataCounts:
+    """Clear assessment-owned local data through the transactional backend API."""
+    with closing(get_connection()) as connection:
+        initialize_schema(connection, _SCHEMA_PATH)
+        return reset_assessment_data(connection)
+
+
+def load_dashboard_demo_data(count: int = 12) -> DashboardSeedResult:
+    """Idempotently load clearly labelled synthetic dashboard records."""
+    with closing(get_connection()) as connection:
+        initialize_schema(connection, _SCHEMA_PATH)
+        return seed_dashboard_assessments(connection, count=count)

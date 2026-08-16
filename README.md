@@ -20,6 +20,10 @@ records, run this command once (it is safe to rerun):
 python -m src.storage.seed_dashboard_demo
 ```
 
+The Streamlit **Settings** page can also load the demo records or permanently
+reset all local assessment data after typed confirmation. Resetting preserves
+the model artifacts and application configuration.
+
 ## Synthetic Data Disclaimer
 
 > This project uses **synthetic data only**, not real customer data.
