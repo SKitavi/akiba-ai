@@ -101,6 +101,18 @@ def test_settings_can_reset_and_reload_demo_data(
     app = AppTest.from_file(_APP_PATH, default_timeout=30).run()
     _button(app, "Settings").click().run()
 
+    assert not any(button.label == "Reset assessment data" for button in app.button)
+    next(
+        field for field in app.text_input if field.label == "Settings access key"
+    ).input("incorrect").run()
+    _button(app, "Unlock Settings").click().run()
+    assert any("access key is incorrect" in item.value for item in app.error)
+
+    next(
+        field for field in app.text_input if field.label == "Settings access key"
+    ).input("CMU#AB39").run()
+    _button(app, "Unlock Settings").click().run()
+
     reset_button = _button(app, "Reset assessment data")
     assert not app.exception
     assert reset_button.disabled

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hmac
+import os
 import sqlite3
 
 import streamlit as st
@@ -21,6 +23,48 @@ from src.ui.services import (
 from src.ui.state import clear_assessment_workflow
 
 
+DEFAULT_SETTINGS_ACCESS_KEY = "CMU#AB39"
+
+
+def _settings_access_key() -> str:
+    """Return the deploy-time Settings key, with the agreed demo fallback."""
+    return os.environ.get("SETTINGS_ACCESS_KEY", DEFAULT_SETTINGS_ACCESS_KEY)
+
+
+def _render_access_gate() -> bool:
+    """Require one successful key check per browser session."""
+    if st.session_state.get("settings_authenticated", False):
+        if st.button("Lock settings"):
+            st.session_state.settings_authenticated = False
+            st.session_state.pop("settings_access_key_input", None)
+            st.session_state.pop("settings_reset_confirmation", None)
+            st.rerun()
+        return True
+
+    with st.container(border=True):
+        render_panel_heading("Restricted settings", "Access required")
+        st.write(
+            "Enter the Settings access key to manage demo records or reset "
+            "assessment data."
+        )
+        with st.form("settings_access_form", clear_on_submit=True):
+            supplied_key = st.text_input(
+                "Settings access key",
+                type="password",
+                autocomplete="off",
+                key="settings_access_key_input",
+            )
+            unlock = st.form_submit_button("Unlock Settings", type="primary")
+
+        if unlock:
+            if hmac.compare_digest(supplied_key, _settings_access_key()):
+                st.session_state.settings_authenticated = True
+                st.rerun()
+            st.error("The Settings access key is incorrect.")
+
+    return False
+
+
 def _render_notice() -> None:
     notice = st.session_state.pop("settings_notice", None)
     if notice:
@@ -37,6 +81,9 @@ def render_settings() -> None:
         "model or application configuration.",
         eyebrow="Workspace administration",
     )
+    if not _render_access_gate():
+        return
+
     _render_notice()
 
     try:
