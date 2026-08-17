@@ -425,9 +425,29 @@ def render_score_panel(risk_score: float, model_version: str) -> None:
     The gauge uses a single accent hue with a needle, matching the
     workstation's dial language — but deliberately has no green/amber/red
     zones. There is no approved score-to-risk-band mapping, so nothing here
-    implies one.
+    implies one. Scores up to 0.010 also receive a clearly labelled magnified
+    detail scale so small changes remain visible without distorting the main
+    0–1 gauge.
     """
-    position = max(0.0, min(1.0, risk_score)) * 100
+    clamped_score = max(0.0, min(1.0, risk_score))
+    position = clamped_score * 100
+    score_text = f"{risk_score:.4f}" if clamped_score < 0.01 else f"{risk_score:.3f}"
+    detail_html = ""
+    if clamped_score <= 0.01:
+        detail_position = clamped_score / 0.01 * 100
+        detail_html = (
+            '<div class="ak-score-detail" '
+            'aria-label="Magnified score detail from 0.000 to 0.010">'
+            '<div class="ak-score-detail-head">'
+            "<span>Small-score detail</span><small>Magnified view</small></div>"
+            f'<div class="ak-score-detail-track" style="--detail-pct: '
+            f'{detail_position:.1f}%"><span></span></div>'
+            '<div class="ak-score-detail-ends"><span>0.000</span>'
+            "<span>0.005</span><span>0.010</span></div>"
+            '<div class="ak-score-detail-note">This close-up makes small score '
+            "changes visible. The circular gauge above remains on the full "
+            "0–1 scale.</div></div>"
+        )
     st.markdown(
         '<section class="ak-score-panel" aria-label="Model risk score">'
         '<div class="ak-score-head">'
@@ -439,9 +459,10 @@ def render_score_panel(risk_score: float, model_version: str) -> None:
         '<div class="ak-gauge-fill"></div>'
         '<div class="ak-gauge-mask"></div>'
         '<div class="ak-gauge-needle"></div>'
-        f'<div class="ak-gauge-value">{risk_score:.3f}</div>'
+        f'<div class="ak-gauge-value">{score_text}</div>'
         "</div>"
         '<div class="ak-gauge-ends"><span>0.0 · Lower</span><span>1.0 · Higher</span></div>'
+        f"{detail_html}"
         "<p>Higher values indicate greater model-estimated risk. This score "
         "supports human review and does not determine the lending decision.</p>"
         '<div class="ak-score-model">Neutral model output · Human review required</div>'

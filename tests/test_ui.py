@@ -16,6 +16,7 @@ from src.features.build_features import FEATURE_COLUMNS
 from src.ingestion.normalization import TransactionContext, normalize_transactions
 from src.storage.db import get_connection, initialize_schema
 from src.storage.seed_dashboard_demo import seed_dashboard_assessments
+from src.ui.components import render_score_panel
 from src.ui.services import UIInputError, parse_sms_records, read_csv_records
 
 
@@ -66,6 +67,24 @@ def _start_demo_assessment(app: AppTest) -> AppTest:
 
 def _has_markdown(app: AppTest, text: str) -> bool:
     return any(text.lower() in str(item.value).lower() for item in app.markdown)
+
+
+def test_small_model_score_has_truthful_magnified_detail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rendered: list[str] = []
+    monkeypatch.setattr(
+        "src.ui.components.st.markdown",
+        lambda body, **_: rendered.append(str(body)),
+    )
+
+    render_score_panel(0.005, "test_v1")
+
+    html = "".join(rendered)
+    assert "0.0050" in html
+    assert "Small-score detail" in html
+    assert "--detail-pct: 50.0%" in html
+    assert "circular gauge above remains on the full 0–1 scale" in html
 
 
 def test_application_loads_and_default_navigation_works(
