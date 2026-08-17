@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -27,6 +28,142 @@ _SOURCE_LABELS = {
     "receipt": "Receipt image",
     "unspecified": "Unspecified",
 }
+
+_CHART_FONT = 'Inter, "Segoe UI", Arial, sans-serif'
+_FOREST = "#0B4A3B"
+_GOLD = "#C18B2F"
+_INK = "#12110F"
+_MUTED = "#77746C"
+_GRID = "#E8E5DC"
+
+
+def _finish_chart(chart: alt.Chart | alt.LayerChart, *, height: int = 220):
+    """Apply the shared visual language used by overview analytics."""
+    return (
+        chart.properties(height=height)
+        .configure_view(stroke=None)
+        .configure_axis(
+            domain=False,
+            gridColor=_GRID,
+            gridOpacity=1,
+            labelColor=_MUTED,
+            labelFont=_CHART_FONT,
+            labelFontSize=11,
+            labelPadding=8,
+            tickColor=_GRID,
+            tickSize=0,
+            titleColor=_MUTED,
+            titleFont=_CHART_FONT,
+            titleFontSize=11,
+            titleFontWeight=500,
+            titlePadding=12,
+        )
+    )
+
+
+def _decision_activity_chart(frame: pd.DataFrame):
+    """Build a compact status chart with labels that remain readable."""
+    status_order = frame["Status"].tolist()
+    maximum = max(int(frame["Assessments"].max()), 1)
+    domain_max = max(maximum * 1.18, maximum + 1)
+
+    bars = (
+        alt.Chart(frame)
+        .mark_bar(cornerRadiusEnd=5, height=24)
+        .encode(
+            x=alt.X(
+                "Assessments:Q",
+                title="Assessments",
+                scale=alt.Scale(domain=[0, domain_max]),
+                axis=alt.Axis(tickMinStep=1),
+            ),
+            y=alt.Y(
+                "Status:N",
+                title=None,
+                sort=status_order,
+                axis=alt.Axis(labelColor=_INK, labelFontWeight=500),
+            ),
+            color=alt.condition(
+                alt.datum.Status == "Awaiting",
+                alt.value(_GOLD),
+                alt.value(_FOREST),
+            ),
+            tooltip=[
+                alt.Tooltip("Status:N", title="Status"),
+                alt.Tooltip("Assessments:Q", title="Assessments", format=",d"),
+            ],
+        )
+    )
+    labels = (
+        alt.Chart(frame)
+        .mark_text(
+            align="left",
+            baseline="middle",
+            color=_INK,
+            dx=8,
+            font=_CHART_FONT,
+            fontSize=11,
+            fontWeight=700,
+        )
+        .encode(
+            x=alt.X("Assessments:Q"),
+            y=alt.Y("Status:N", sort=status_order),
+            text=alt.Text("Assessments:Q", format=",d"),
+        )
+    )
+    return _finish_chart(bars + labels)
+
+
+def _score_distribution_chart(frame: pd.DataFrame):
+    """Build an annotated distribution chart with horizontal interval labels."""
+    interval_order = frame["Score interval"].tolist()
+    maximum = max(int(frame["Assessments"].max()), 1)
+    domain_max = max(maximum * 1.18, maximum + 1)
+
+    bars = (
+        alt.Chart(frame)
+        .mark_bar(
+            color=_GOLD,
+            cornerRadiusTopLeft=5,
+            cornerRadiusTopRight=5,
+            size=54,
+        )
+        .encode(
+            x=alt.X(
+                "Score interval:N",
+                title="Model score interval",
+                sort=interval_order,
+                axis=alt.Axis(labelAngle=0, labelLimit=100),
+            ),
+            y=alt.Y(
+                "Assessments:Q",
+                title="Assessments",
+                scale=alt.Scale(domain=[0, domain_max]),
+                axis=alt.Axis(tickMinStep=1),
+            ),
+            tooltip=[
+                alt.Tooltip("Score interval:N", title="Score interval"),
+                alt.Tooltip("Assessments:Q", title="Assessments", format=",d"),
+            ],
+        )
+    )
+    labels = (
+        alt.Chart(frame)
+        .mark_text(
+            baseline="bottom",
+            color=_INK,
+            dy=-7,
+            font=_CHART_FONT,
+            fontSize=11,
+            fontWeight=700,
+        )
+        .encode(
+            x=alt.X("Score interval:N", sort=interval_order),
+            y=alt.Y("Assessments:Q"),
+            text=alt.Text("Assessments:Q", format=",d"),
+        )
+    )
+    return _finish_chart(bars + labels)
 
 
 def _format_timestamp(value: str) -> str:
@@ -106,12 +243,11 @@ def render_overview() -> None:
                     ],
                 }
             )
-            st.bar_chart(
-                decision_frame,
-                x="Status",
-                y="Assessments",
-                color="#0B4A3B",
-                height=270,
+            st.altair_chart(
+                _decision_activity_chart(decision_frame),
+                use_container_width=True,
+                theme=None,
+                key="decision_activity_chart",
             )
     with scores:
         with st.container(border=True):
@@ -126,12 +262,11 @@ def render_overview() -> None:
                     ],
                 }
             )
-            st.bar_chart(
-                score_frame,
-                x="Score interval",
-                y="Assessments",
-                color="#C18B2F",
-                height=270,
+            st.altair_chart(
+                _score_distribution_chart(score_frame),
+                use_container_width=True,
+                theme=None,
+                key="score_distribution_chart",
             )
 
     sources, quality = st.columns(2, gap="large", vertical_alignment="top")

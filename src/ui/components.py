@@ -247,9 +247,19 @@ def render_summary_counters(rows: tuple[tuple[str, int], ...]) -> None:
     """Render four labeled operational totals in the shared summary strip."""
     if len(rows) != 4:
         raise ValueError("A summary strip requires exactly four counters.")
+    tones = {
+        "Decisions recorded": "valid",
+        "Awaiting decision": "attention",
+        "Ingestion warnings": "attention",
+    }
     _render_kpi_cards(
         tuple(
-            (label, value, "neutral", _SUMMARY_ICON_BY_LABEL.get(label, "layers"))
+            (
+                label,
+                value,
+                tones.get(label, "neutral") if value else "neutral",
+                _SUMMARY_ICON_BY_LABEL.get(label, "layers"),
+            )
             for label, value in rows
         )
     )
