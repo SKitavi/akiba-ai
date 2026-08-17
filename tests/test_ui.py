@@ -81,7 +81,7 @@ def test_small_model_score_has_truthful_magnified_detail(
     render_score_panel(0.005, "test_v1")
 
     html = "".join(rendered)
-    assert "0.0050" in html
+    assert "<span>0.0050</span>" in html
     assert "Small-score detail" in html
     assert "--detail-pct: 50.0%" in html
     assert "circular gauge above remains on the full 0–1 scale" in html

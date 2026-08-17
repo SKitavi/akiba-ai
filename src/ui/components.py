@@ -459,7 +459,7 @@ def render_score_panel(risk_score: float, model_version: str) -> None:
         '<div class="ak-gauge-fill"></div>'
         '<div class="ak-gauge-mask"></div>'
         '<div class="ak-gauge-needle"></div>'
-        f'<div class="ak-gauge-value">{score_text}</div>'
+        f'<div class="ak-gauge-value"><span>{score_text}</span></div>'
         "</div>"
         '<div class="ak-gauge-ends"><span>0.0 · Lower</span><span>1.0 · Higher</span></div>'
         f"{detail_html}"

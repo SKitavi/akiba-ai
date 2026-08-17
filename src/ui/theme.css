@@ -1027,6 +1027,7 @@ h4.ak-section-title {
   transform-origin: 4px 2px;
   transform: rotate(calc(var(--pct, 0) * 3.6deg - 90deg));
   width: 72px;
+  z-index: 1;
 }
 
 .ak-gauge-needle::after {
@@ -1052,20 +1053,31 @@ h4.ak-section-title {
 }
 
 .ak-gauge-value {
+  align-items: center;
   bottom: 0;
   color: var(--ak-text);
+  display: flex;
   font-size: 1.62rem;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
+  justify-content: center;
   left: 0;
   letter-spacing: -0.03em;
   position: absolute;
   right: 0;
   text-align: center;
   top: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  z-index: 2;
+}
+
+.ak-gauge-value > span {
+  background: var(--ak-surface);
+  border: 1px solid rgba(226, 223, 213, 0.72);
+  border-radius: 999px;
+  box-shadow: 0 0 0 5px var(--ak-surface);
+  line-height: 1;
+  min-width: 5.35rem;
+  padding: 0.3rem 0.5rem 0.34rem;
 }
 
 .ak-gauge-ends {
