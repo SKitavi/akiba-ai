@@ -422,32 +422,26 @@ def render_table(
 def render_score_panel(risk_score: float, model_version: str) -> None:
     """Render a neutral model output without invented policy thresholds.
 
-    The gauge uses a single accent hue with a needle, matching the
-    workstation's dial language — but deliberately has no green/amber/red
-    zones. There is no approved score-to-risk-band mapping, so nothing here
-    implies one. Scores up to 0.010 also receive a clearly labelled magnified
-    detail scale so small changes remain visible without distorting the main
-    0–1 gauge.
+    The score uses one neutral position scale without green/amber/red policy
+    zones. Scores up to 0.010 use a clearly labelled magnified scale so small
+    changes remain visible without implying invented risk bands.
     """
     clamped_score = max(0.0, min(1.0, risk_score))
-    position = clamped_score * 100
     score_text = f"{risk_score:.4f}" if clamped_score < 0.01 else f"{risk_score:.3f}"
-    detail_html = ""
-    if clamped_score <= 0.01:
-        detail_position = clamped_score / 0.01 * 100
-        detail_html = (
-            '<div class="ak-score-detail" '
-            'aria-label="Magnified score detail from 0.000 to 0.010">'
-            '<div class="ak-score-detail-head">'
-            "<span>Small-score detail</span><small>Magnified view</small></div>"
-            f'<div class="ak-score-detail-track" style="--detail-pct: '
-            f'{detail_position:.1f}%"><span></span></div>'
-            '<div class="ak-score-detail-ends"><span>0.000</span>'
-            "<span>0.005</span><span>0.010</span></div>"
-            '<div class="ak-score-detail-note">This close-up makes small score '
-            "changes visible. The circular gauge above remains on the full "
-            "0–1 scale.</div></div>"
-        )
+    magnified = clamped_score <= 0.01
+    scale_maximum = 0.01 if magnified else 1.0
+    scale_position = clamped_score / scale_maximum * 100
+    scale_mode = "Magnified 0.000–0.010 view" if magnified else "Full 0–1 view"
+    scale_ticks = (
+        ("0.000", "0.005", "0.010")
+        if magnified
+        else ("0.0 · Lower", "0.5", "1.0 · Higher")
+    )
+    scale_note = (
+        "Magnified because this score is close to zero. Full model range is 0–1."
+        if magnified
+        else "Position shown on the full model range from 0 to 1."
+    )
     st.markdown(
         '<section class="ak-score-panel" aria-label="Model risk score">'
         '<div class="ak-score-head">'
@@ -455,17 +449,20 @@ def render_score_panel(risk_score: float, model_version: str) -> None:
         '<div class="ak-score-label">Model risk score</div></div>'
         f'<span class="ak-score-version">Model version: {escape(model_version)}</span>'
         "</div>"
-        f'<div class="ak-gauge" style="--pct: {position:.1f}" aria-hidden="true">'
-        '<div class="ak-gauge-fill"></div>'
-        '<div class="ak-gauge-mask"></div>'
-        '<div class="ak-gauge-needle"></div>'
-        f'<div class="ak-gauge-value"><span>{score_text}</span></div>'
-        "</div>"
-        '<div class="ak-gauge-ends"><span>0.0 · Lower</span><span>1.0 · Higher</span></div>'
-        f"{detail_html}"
-        "<p>Higher values indicate greater model-estimated risk. This score "
-        "supports human review and does not determine the lending decision.</p>"
-        '<div class="ak-score-model">Neutral model output · Human review required</div>'
+        '<div class="ak-score-reading">'
+        f"<strong>{score_text}</strong><span>Exact model score</span></div>"
+        '<div class="ak-score-scale" aria-label="Model score position">'
+        '<div class="ak-score-scale-head"><span>Score position</span>'
+        f"<small>{scale_mode}</small></div>"
+        f'<div class="ak-score-scale-track" style="--score-pct: '
+        f'{scale_position:.1f}%"><span></span></div>'
+        '<div class="ak-score-scale-ends">'
+        f"<span>{scale_ticks[0]}</span><span>{scale_ticks[1]}</span>"
+        f"<span>{scale_ticks[2]}</span></div>"
+        f'<div class="ak-score-scale-note">{scale_note}</div></div>'
+        '<p class="ak-score-guidance">Higher scores mean greater model-estimated '
+        "risk. The score supports review; the loan officer makes the final "
+        "decision.</p>"
         "</section>",
         unsafe_allow_html=True,
     )

@@ -81,10 +81,10 @@ def test_small_model_score_has_truthful_magnified_detail(
     render_score_panel(0.005, "test_v1")
 
     html = "".join(rendered)
-    assert "<span>0.0050</span>" in html
-    assert "Small-score detail" in html
-    assert "--detail-pct: 50.0%" in html
-    assert "circular gauge above remains on the full 0–1 scale" in html
+    assert "<strong>0.0050</strong>" in html
+    assert "Magnified 0.000–0.010 view" in html
+    assert "--score-pct: 50.0%" in html
+    assert "Full model range is 0–1" in html
 
 
 def test_application_loads_and_default_navigation_works(

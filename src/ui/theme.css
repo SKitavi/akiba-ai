@@ -951,8 +951,8 @@ h4.ak-section-title {
 }
 
 /* ---------------------------------------------------------------- */
-/* Model output — circular gauge, single neutral hue. No traffic-     */
-/* light zones: there is no approved score-to-risk-band mapping.      */
+/* Model output — one neutral position scale. No traffic-light zones: */
+/* there is no approved score-to-risk-band mapping.                    */
 /* ---------------------------------------------------------------- */
 
 .ak-score-panel {
@@ -997,134 +997,65 @@ h4.ak-section-title {
   padding: 0.22rem 0.5rem;
 }
 
-.ak-gauge {
-  height: 176px;
-  margin: 0.85rem auto 0;
-  position: relative;
-  width: 176px;
+.ak-score-reading {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  padding: 1.05rem 0 0.75rem;
 }
 
-.ak-gauge-fill {
-  background: conic-gradient(
-    var(--ak-accent) calc(var(--pct, 0) * 3.6deg),
-    var(--ak-surface-muted) 0
-  );
-  border-radius: 50%;
-  height: 176px;
-  left: 0;
-  position: absolute;
-  top: 0;
-  width: 176px;
-}
-
-.ak-gauge-needle {
-  background: #2d2a24;
-  border-radius: 2px;
-  height: 4px;
-  left: 50%;
-  position: absolute;
-  top: 50%;
-  transform-origin: 4px 2px;
-  transform: rotate(calc(var(--pct, 0) * 3.6deg - 90deg));
-  width: 72px;
-  z-index: 1;
-}
-
-.ak-gauge-needle::after {
-  background: #2d2a24;
-  border: 3px solid var(--ak-surface);
-  border-radius: 50%;
-  content: "";
-  height: 14px;
-  left: -7px;
-  position: absolute;
-  top: -5px;
-  width: 14px;
-}
-
-.ak-gauge-mask {
-  background: var(--ak-surface);
-  border-radius: 50%;
-  height: 128px;
-  left: 24px;
-  position: absolute;
-  top: 24px;
-  width: 128px;
-}
-
-.ak-gauge-value {
-  align-items: center;
-  bottom: 0;
+.ak-score-reading strong {
   color: var(--ak-text);
-  display: flex;
-  font-size: 1.62rem;
+  font-size: 2rem;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  justify-content: center;
-  left: 0;
-  letter-spacing: -0.03em;
-  position: absolute;
-  right: 0;
-  text-align: center;
-  top: 0;
-  z-index: 2;
-}
-
-.ak-gauge-value > span {
-  background: var(--ak-surface);
-  border: 1px solid rgba(226, 223, 213, 0.72);
-  border-radius: 999px;
-  box-shadow: 0 0 0 5px var(--ak-surface);
+  font-weight: 750;
+  letter-spacing: -0.04em;
   line-height: 1;
-  min-width: 5.35rem;
-  padding: 0.3rem 0.5rem 0.34rem;
 }
 
-.ak-gauge-ends {
+.ak-score-reading span {
   color: var(--ak-muted);
-  display: flex;
-  font-size: 0.7rem;
-  justify-content: space-between;
-  margin: 0.35rem auto 0;
-  width: 176px;
+  font-size: 0.65rem;
+  font-weight: 600;
 }
 
-.ak-score-detail {
+.ak-score-scale {
   background: var(--ak-surface-muted);
   border: 1px solid var(--ak-border);
   border-radius: var(--ak-radius-sm);
-  margin-top: 0.8rem;
-  padding: 0.65rem 0.7rem 0.6rem;
+  padding: 0.7rem 0.75rem 0.65rem;
 }
 
-.ak-score-detail-head {
+.ak-score-scale-head {
   align-items: baseline;
   display: flex;
   gap: 0.75rem;
   justify-content: space-between;
 }
 
-.ak-score-detail-head > span {
+.ak-score-scale-head > span {
   color: var(--ak-text);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
 }
 
-.ak-score-detail-head small {
+.ak-score-scale-head small {
   color: var(--ak-accent-hover);
   font-size: 0.6rem;
   font-weight: 650;
+  text-align: right;
 }
 
-.ak-score-detail-track {
+.ak-score-scale-track {
   background: #dedbd2;
   border-radius: 999px;
-  height: 7px;
-  margin: 0.65rem 0 0.35rem;
+  height: 8px;
+  margin: 0.7rem 0 0.38rem;
   position: relative;
 }
 
-.ak-score-detail-track::before {
+.ak-score-scale-track::before {
   background: linear-gradient(90deg, var(--ak-primary), var(--ak-accent));
   border-radius: inherit;
   content: "";
@@ -1132,53 +1063,46 @@ h4.ak-section-title {
   left: 0;
   position: absolute;
   top: 0;
-  width: var(--detail-pct, 0%);
+  width: var(--score-pct, 0%);
 }
 
-.ak-score-detail-track > span {
+.ak-score-scale-track > span {
   background: var(--ak-surface);
   border: 2px solid var(--ak-accent-hover);
   border-radius: 50%;
   box-shadow: 0 1px 3px rgba(18, 17, 15, 0.2);
-  height: 13px;
-  left: var(--detail-pct, 0%);
+  height: 14px;
+  left: var(--score-pct, 0%);
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 13px;
+  width: 14px;
   z-index: 1;
 }
 
-.ak-score-detail-ends {
+.ak-score-scale-ends {
   color: var(--ak-muted);
   display: flex;
-  font-size: 0.58rem;
+  font-size: 0.6rem;
   font-variant-numeric: tabular-nums;
   justify-content: space-between;
 }
 
-.ak-score-detail-note {
+.ak-score-scale-note {
   border-top: 1px solid var(--ak-border);
   color: var(--ak-muted);
-  font-size: 0.62rem;
+  font-size: 0.64rem;
   line-height: 1.4;
-  margin-top: 0.5rem;
-  padding-top: 0.45rem;
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
 }
 
-.ak-score-panel p {
+.ak-score-panel p.ak-score-guidance {
   color: var(--ak-text-secondary);
   font-size: 0.82rem;
   line-height: 1.5;
-  margin: 0.8rem 0 0.65rem;
+  margin: 0.8rem 0 0;
   max-width: 60ch;
-}
-
-.ak-score-model {
-  border-top: 1px solid var(--ak-border);
-  color: var(--ak-muted);
-  font-size: 0.73rem;
-  padding-top: 0.65rem;
 }
 
 /* ---------------------------------------------------------------- */
@@ -1779,29 +1703,8 @@ textarea:focus-visible,
     text-align: left;
   }
 
-  .ak-gauge {
-    height: 156px;
-    width: 156px;
-  }
-
-  .ak-gauge-fill {
-    height: 156px;
-    width: 156px;
-  }
-
-  .ak-gauge-mask {
-    height: 112px;
-    left: 22px;
-    top: 22px;
-    width: 112px;
-  }
-
-  .ak-gauge-needle {
-    width: 62px;
-  }
-
-  .ak-gauge-ends {
-    width: 156px;
+  .ak-score-reading strong {
+    font-size: 1.75rem;
   }
 
   [data-testid="stRadio"] div[role="radiogroup"] {
