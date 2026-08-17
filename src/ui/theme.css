@@ -116,14 +116,26 @@ button {
   background: linear-gradient(180deg, var(--ak-sidebar-bg-top), var(--ak-sidebar-bg-bottom));
   border-right: 1px solid var(--ak-sidebar-border);
   min-width: 228px !important;
+  scrollbar-width: none;
   width: 228px !important;
+}
+
+[data-testid="stSidebar"]::-webkit-scrollbar,
+[data-testid="stSidebar"] *::-webkit-scrollbar {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
+[data-testid="stSidebar"] * {
+  scrollbar-width: none;
 }
 
 [data-testid="stSidebarUserContent"] {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 1.25rem 1rem 1.1rem;
+  padding: 0.65rem 1rem 1.1rem;
 }
 
 [data-testid="stSidebarUserContent"] [data-testid="stVerticalBlock"] {
@@ -134,12 +146,6 @@ button {
   [data-testid="stVerticalBlock"]
   > [data-testid="stElementContainer"]:has(.ak-sb-nav-label) {
   margin-bottom: 0.45rem;
-}
-
-[data-testid="stSidebarUserContent"]
-  [data-testid="stVerticalBlock"]
-  > [data-testid="stElementContainer"]:has(.ak-sb-status) {
-  margin-top: 0.75rem;
 }
 
 [data-testid="stSidebarCollapseButton"] svg,
@@ -196,29 +202,43 @@ button {
   align-items: center;
   border-bottom: 1px solid var(--ak-sidebar-border);
   display: flex;
-  gap: 0.65rem;
-  margin-bottom: 1rem;
-  padding: 0.1rem 0 1rem;
+  gap: 0.7rem;
+  margin-bottom: 0.9rem;
+  padding: 0 0 0.9rem;
 }
 
 .ak-sb-mark {
   align-items: center;
-  color: #e4c477;
   display: flex;
   flex: 0 0 auto;
-  height: 34px;
+  height: 40px;
   justify-content: center;
-  width: 34px;
+  width: 40px;
 }
 
 .ak-sb-mark svg {
   fill: none;
-  height: 34px;
-  stroke: currentColor;
+  height: 40px;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.6;
-  width: 34px;
+  width: 40px;
+}
+
+.ak-mark-frame {
+  fill: rgba(225, 196, 119, 0.08);
+  stroke: rgba(225, 196, 119, 0.72);
+  stroke-width: 1.4;
+}
+
+.ak-mark-signal {
+  stroke: #f0cd77;
+  stroke-width: 2.2;
+}
+
+.ak-mark-node {
+  fill: #f0cd77;
+  stroke: var(--ak-sidebar-bg-top);
+  stroke-width: 1.2;
 }
 
 .ak-sb-brand-text {
@@ -234,14 +254,17 @@ button {
   letter-spacing: -0.01em;
 }
 
+.ak-sb-name span {
+  color: #f0cd77;
+}
+
 .ak-sb-product {
   color: var(--ak-sidebar-text);
   font-size: 0.67rem;
   letter-spacing: 0.015em;
 }
 
-.ak-sb-nav-label,
-.ak-sb-status-label {
+.ak-sb-nav-label {
   color: rgba(231, 239, 235, 0.62);
   font-size: 0.66rem;
   font-weight: 600;
@@ -301,44 +324,6 @@ button {
   background: rgba(225, 196, 119, 0.22);
   box-shadow: none;
   transform: none;
-}
-
-.ak-sb-status {
-  border-top: 1px solid var(--ak-sidebar-border);
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin-top: auto;
-  padding-top: 1.1rem;
-}
-
-.ak-sb-status-label {
-  margin-bottom: 0.05rem;
-  text-transform: uppercase;
-}
-
-.ak-sb-status-row {
-  align-items: center;
-  color: var(--ak-sidebar-text);
-  display: flex;
-  font-size: 0.74rem;
-  gap: 0.5rem;
-}
-
-.ak-sb-status-row .ak-icon {
-  color: var(--ak-accent);
-  flex: 0 0 auto;
-}
-
-.ak-sb-chip {
-  align-self: flex-start;
-  background: rgba(225, 196, 119, 0.13);
-  border: 1px solid rgba(225, 196, 119, 0.32);
-  border-radius: 999px;
-  color: #ead08d;
-  font-size: 0.68rem;
-  font-weight: 500;
-  padding: 0.2rem 0.55rem;
 }
 
 /* ---------------------------------------------------------------- */
@@ -1091,6 +1076,19 @@ textarea:focus-visible,
   word-break: keep-all;
 }
 
+@media (min-width: 900px) {
+  [data-testid="stSidebar"] {
+    transform: none !important;
+    visibility: visible !important;
+  }
+
+  [data-testid="stSidebarHeader"],
+  [data-testid="stSidebarCollapseButton"],
+  [data-testid="stExpandSidebarButton"] {
+    display: none !important;
+  }
+}
+
 @media (min-width: 901px) and (max-width: 1200px) {
   .ak-kpi-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1158,11 +1156,22 @@ textarea:focus-visible,
     z-index: 1000000;
   }
 
+  [data-testid="stSidebarHeader"] {
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+
   [data-testid="stSidebarCollapseButton"] {
     position: absolute !important;
     right: 0.75rem !important;
     top: 0.6rem !important;
     z-index: 1000001 !important;
+  }
+
+  [data-testid="stSidebarCollapseButton"] [data-testid="stIconMaterial"]::before {
+    content: "×";
+    font-size: 1.25rem;
   }
 
   [data-testid="stAppViewContainer"]:has([data-testid="stExpandSidebarButton"])

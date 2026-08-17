@@ -78,19 +78,23 @@ def _model_status() -> str:
 
 
 def render_sidebar() -> None:
-    """Render brand, task navigation, and honest local-environment status."""
+    """Render the AkibaAI brand and primary workspace navigation."""
     current_route = Route(st.session_state.route)
 
     with st.sidebar:
         st.markdown(
             '<div class="ak-sb-brand">'
             '<span class="ak-sb-mark">'
-            '<svg viewBox="0 0 32 32" aria-hidden="true">'
-            '<circle cx="16" cy="16" r="13"/>'
-            '<path d="M10 20.5 16 9l6 11.5M12.3 16.3h7.4"/>'
+            '<svg viewBox="0 0 40 40" aria-hidden="true">'
+            '<path class="ak-mark-frame" d="M20 2.5 35 11v18L20 37.5 5 29V11Z"/>'
+            '<path class="ak-mark-signal" d="m10.5 27 7.2-14 5.5 10 6.3-12"/>'
+            '<circle class="ak-mark-node" cx="10.5" cy="27" r="1.8"/>'
+            '<circle class="ak-mark-node" cx="17.7" cy="13" r="1.8"/>'
+            '<circle class="ak-mark-node" cx="23.2" cy="23" r="1.8"/>'
+            '<circle class="ak-mark-node" cx="29.5" cy="11" r="1.8"/>'
             "</svg></span>"
             '<div class="ak-sb-brand-text">'
-            '<span class="ak-sb-name">AkibaAI</span>'
+            '<span class="ak-sb-name">Akiba<span>AI</span></span>'
             '<span class="ak-sb-product">Credit intelligence</span>'
             "</div></div>",
             unsafe_allow_html=True,
@@ -107,18 +111,6 @@ def render_sidebar() -> None:
             ):
                 st.session_state.route = route.value
                 st.rerun()
-
-        st.markdown(
-            '<div class="ak-sb-status">'
-            '<span class="ak-sb-status-label">System status</span>'
-            f'<div class="ak-sb-status-row">{_icon("lock", 14)}'
-            "<span>Offline workspace</span></div>"
-            f'<div class="ak-sb-status-row">{_icon("cpu", 14)}'
-            f"<span>{escape(_model_status())}</span></div>"
-            '<span class="ak-sb-chip">Synthetic data</span>'
-            "</div>",
-            unsafe_allow_html=True,
-        )
 
 
 def render_page_header(
