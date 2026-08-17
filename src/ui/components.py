@@ -255,15 +255,64 @@ def render_summary_counters(rows: tuple[tuple[str, int], ...]) -> None:
     )
 
 
-def render_metric_rows(rows: tuple[tuple[str, str], ...]) -> None:
-    """Render compact label/value rows for financial behaviour."""
-    body = "".join(
-        '<div class="ak-metric-row">'
-        f"<span>{escape(label)}</span><strong>{escape(value)}</strong>"
-        "</div>"
-        for label, value in rows
+def render_financial_summary(
+    *,
+    inflows: str,
+    outflows: str,
+    net_flow: str,
+    negative_months: str,
+    transactions_per_month: str,
+    active_months: str,
+    mean_balance: str,
+    low_balance_rate: str,
+) -> None:
+    """Render the validated financial features as two balanced analysis cards."""
+
+    def metric_row(label: str, value: str, unit: str = "") -> str:
+        unit_html = f"<small>{escape(unit)}</small>" if unit else ""
+        return (
+            '<div class="ak-financial-metric">'
+            f"<span>{escape(label)}</span><strong>{escape(value)}{unit_html}</strong>"
+            "</div>"
+        )
+
+    cash_rows = "".join(
+        (
+            metric_row("Observed inflows", inflows, "units"),
+            metric_row("Observed outflows", outflows, "units"),
+            metric_row("Negative-flow months", negative_months),
+        )
     )
-    st.markdown(f'<div class="ak-metric-list">{body}</div>', unsafe_allow_html=True)
+    activity_rows = "".join(
+        (
+            metric_row("Transactions / month", transactions_per_month),
+            metric_row("Active months", active_months),
+            metric_row("Low-balance rate", low_balance_rate),
+        )
+    )
+    st.markdown(
+        '<div class="ak-financial-note">'
+        '<span aria-hidden="true">i</span>'
+        "Amounts remain in provider wallet units. No currency conversion has "
+        "been inferred.</div>"
+        '<div class="ak-financial-grid">'
+        '<section class="ak-financial-card cash-flow">'
+        '<div class="ak-financial-card-heading">'
+        "<span>Cash-flow behaviour</span><small>Observed movement</small></div>"
+        '<div class="ak-financial-primary">'
+        "<span>Net flow</span>"
+        f"<strong>{escape(net_flow)}<small>units</small></strong></div>"
+        f'<div class="ak-financial-metrics">{cash_rows}</div></section>'
+        '<section class="ak-financial-card activity">'
+        '<div class="ak-financial-card-heading">'
+        "<span>Account activity</span><small>Usage pattern</small></div>"
+        '<div class="ak-financial-primary">'
+        "<span>Mean balance</span>"
+        f"<strong>{escape(mean_balance)}<small>units</small></strong></div>"
+        f'<div class="ak-financial-metrics">{activity_rows}</div></section>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 
 def render_table(

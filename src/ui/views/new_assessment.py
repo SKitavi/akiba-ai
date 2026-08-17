@@ -22,7 +22,7 @@ from src.application.assessment import AssessmentError
 from src.storage.assessment_store import AssessmentPersistenceError
 from src.ui.components import (
     render_failure_panel,
-    render_metric_rows,
+    render_financial_summary,
     render_page_header,
     render_panel_heading,
     render_step_bar,
@@ -314,43 +314,21 @@ def _rejection_table(result: object) -> pd.DataFrame:
 
 
 def _render_financial_preview(feature: pd.Series) -> None:
-    first, second = st.columns(2, gap="large", vertical_alignment="top")
-    with first:
-        render_panel_heading("Cash-flow behaviour")
-        render_metric_rows(
-            (
-                (
-                    "Observed inflows",
-                    f"{_format_number(feature['inflow_total'])} units",
-                ),
-                (
-                    "Observed outflows",
-                    f"{_format_number(feature['outflow_total'])} units",
-                ),
-                ("Net flow", f"{_format_number(feature['net_flow_total'])} units"),
-                (
-                    "Negative-flow months",
-                    _format_number(feature["negative_net_months"], decimals=0),
-                ),
-            )
-        )
-    with second:
-        render_panel_heading("Account activity")
-        render_metric_rows(
-            (
-                ("Transactions / month", _format_number(feature["tx_per_month"])),
-                ("Active months", _format_number(feature["active_months"], decimals=0)),
-                ("Mean balance", f"{_format_number(feature['mean_balance'])} units"),
-                ("Low-balance rate", f"{float(feature['low_balance_rate']):.1%}"),
-            )
-        )
+    render_financial_summary(
+        inflows=_format_number(feature["inflow_total"]),
+        outflows=_format_number(feature["outflow_total"]),
+        net_flow=_format_number(feature["net_flow_total"]),
+        negative_months=_format_number(feature["negative_net_months"], decimals=0),
+        transactions_per_month=_format_number(feature["tx_per_month"]),
+        active_months=_format_number(feature["active_months"], decimals=0),
+        mean_balance=_format_number(feature["mean_balance"]),
+        low_balance_rate=f"{float(feature['low_balance_rate']):.1%}",
+    )
 
     with st.expander("Review all model input features"):
         names = [name for name in feature.index if name != "applicant_id"]
         render_table(
-            pd.DataFrame(
-                {"Feature": names, "Value": [feature[name] for name in names]}
-            )
+            pd.DataFrame({"Feature": names, "Value": [feature[name] for name in names]})
         )
 
 
@@ -387,10 +365,6 @@ def _render_validation_step() -> None:
             )
         else:
             st.markdown("#### Financial summary")
-            st.caption(
-                "Amounts remain in provider wallet units. No currency conversion has "
-                "been inferred."
-            )
             _render_financial_preview(st.session_state.feature_preview)
 
         _, previous, proceed = st.columns([5, 1.35, 2.2])
