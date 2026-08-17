@@ -56,18 +56,13 @@ def render_overview() -> None:
     """Render analytics calculated from durable, linked backend records."""
     render_page_header(
         "Credit assessment workspace",
-        "Monitor assessment activity and decision follow-through, then continue "
-        "with the next applicant review.",
+        "Monitor assessment activity and decision follow-through.",
         eyebrow="Local operations overview",
     )
 
-    action, note = st.columns([2, 5], vertical_alignment="center")
-    with action:
-        if st.button("Start new assessment", type="primary", key="overview_start"):
-            reset_assessment()
-            st.rerun()
-    with note:
-        st.caption("Persisted local records · Processing stays on this workstation")
+    if st.button("Start new assessment", type="primary", key="overview_start"):
+        reset_assessment()
+        st.rerun()
 
     try:
         analytics = load_assessment_analytics()
@@ -137,9 +132,6 @@ def render_overview() -> None:
                 y="Assessments",
                 color="#C18B2F",
                 height=270,
-            )
-            st.caption(
-                "Intervals describe model output only; they are not policy bands."
             )
 
     sources, quality = st.columns(2, gap="large", vertical_alignment="top")
