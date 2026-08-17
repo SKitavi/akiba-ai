@@ -1088,23 +1088,6 @@ h4.ak-section-title {
   justify-content: space-between;
 }
 
-.ak-score-scale-note {
-  border-top: 1px solid var(--ak-border);
-  color: var(--ak-muted);
-  font-size: 0.64rem;
-  line-height: 1.4;
-  margin-top: 0.55rem;
-  padding-top: 0.5rem;
-}
-
-.ak-score-panel p.ak-score-guidance {
-  color: var(--ak-text-secondary);
-  font-size: 0.82rem;
-  line-height: 1.5;
-  margin: 0.8rem 0 0;
-  max-width: 60ch;
-}
-
 /* ---------------------------------------------------------------- */
 /* Explainability — horizontal diverging bars.                        */
 /* ---------------------------------------------------------------- */

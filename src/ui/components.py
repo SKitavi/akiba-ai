@@ -437,11 +437,6 @@ def render_score_panel(risk_score: float, model_version: str) -> None:
         if magnified
         else ("0.0 · Lower", "0.5", "1.0 · Higher")
     )
-    scale_note = (
-        "Magnified because this score is close to zero. Full model range is 0–1."
-        if magnified
-        else "Position shown on the full model range from 0 to 1."
-    )
     st.markdown(
         '<section class="ak-score-panel" aria-label="Model risk score">'
         '<div class="ak-score-head">'
@@ -458,11 +453,7 @@ def render_score_panel(risk_score: float, model_version: str) -> None:
         f'{scale_position:.1f}%"><span></span></div>'
         '<div class="ak-score-scale-ends">'
         f"<span>{scale_ticks[0]}</span><span>{scale_ticks[1]}</span>"
-        f"<span>{scale_ticks[2]}</span></div>"
-        f'<div class="ak-score-scale-note">{scale_note}</div></div>'
-        '<p class="ak-score-guidance">Higher scores mean greater model-estimated '
-        "risk. The score supports review; the loan officer makes the final "
-        "decision.</p>"
+        f"<span>{scale_ticks[2]}</span></div></div>"
         "</section>",
         unsafe_allow_html=True,
     )

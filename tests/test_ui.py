@@ -84,7 +84,8 @@ def test_small_model_score_has_truthful_magnified_detail(
     assert "<strong>0.0050</strong>" in html
     assert "Magnified 0.000–0.010 view" in html
     assert "--score-pct: 50.0%" in html
-    assert "Full model range is 0–1" in html
+    assert "Magnified because" not in html
+    assert "loan officer makes the final decision" not in html
 
 
 def test_application_loads_and_default_navigation_works(
