@@ -1052,6 +1052,90 @@ textarea:focus-visible,
   font-weight: 700 !important;
 }
 
+/* ---------------------------------------------------------------- */
+/* Themed HTML tables — for short, fixed-length listings where       */
+/* st.dataframe's canvas grid can't be restyled to match the palette. */
+/* ---------------------------------------------------------------- */
+
+.ak-table-wrap {
+  background: var(--ak-surface);
+  border: 1px solid var(--ak-border);
+  border-radius: var(--ak-radius);
+  margin-bottom: 0.5rem;
+  overscroll-behavior-inline: contain;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.ak-table {
+  border-collapse: collapse;
+  font-size: 0.83rem;
+  margin: 0 !important;
+  width: 100%;
+}
+
+.ak-table--wide {
+  min-width: 64rem;
+}
+
+.ak-table thead th {
+  background: var(--ak-surface-muted);
+  border-bottom: 1px solid var(--ak-border-strong);
+  color: var(--ak-muted);
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 0.85rem;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ak-table th:not(:last-child),
+.ak-table td:not(:last-child) {
+  border-right: 1px solid var(--ak-border);
+}
+
+.ak-table thead th.num {
+  text-align: right;
+}
+
+.ak-table tbody td {
+  border-bottom: 1px solid var(--ak-border);
+  color: var(--ak-text);
+  padding: 0.48rem 0.85rem;
+  line-height: 1.4;
+}
+
+.ak-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ak-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--ak-surface-muted) 46%, var(--ak-surface));
+}
+
+.ak-table tbody td.num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  text-align: right;
+}
+
+.ak-table tbody tr:hover td {
+  background: var(--ak-primary-soft);
+}
+
+@media (max-width: 640px) {
+  .ak-table {
+    font-size: 0.78rem;
+  }
+
+  .ak-table thead th,
+  .ak-table tbody td {
+    padding: 0.45rem 0.65rem;
+  }
+}
+
 [data-testid="stAlert"] {
   border-radius: var(--ak-radius-sm);
 }

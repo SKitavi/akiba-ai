@@ -5,6 +5,7 @@ from __future__ import annotations
 from html import escape
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 from src.model.loader import resolve_model_path
@@ -263,6 +264,52 @@ def render_metric_rows(rows: tuple[tuple[str, str], ...]) -> None:
         for label, value in rows
     )
     st.markdown(f'<div class="ak-metric-list">{body}</div>', unsafe_allow_html=True)
+
+
+def render_table(
+    frame: pd.DataFrame, *, formatters: dict[str, str] | None = None
+) -> None:
+    """Render a short, fully-themed HTML table.
+
+    ``st.dataframe`` draws its grid onto a canvas for performance, so CSS can
+    only reach its outer border — never the header fill, row dividers, or
+    hover state. For small, fixed-length listings (not the 500-row history
+    register, which keeps ``st.dataframe`` for virtualization), this renders
+    plain HTML instead so it can match the workstation's palette exactly.
+    """
+    formatters = formatters or {}
+    numeric_cols = {
+        column
+        for column in frame.columns
+        if pd.api.types.is_numeric_dtype(frame[column])
+    }
+    head = "".join(
+        f'<th scope="col" class="{"num" if column in numeric_cols else ""}">'
+        f"{escape(str(column))}</th>"
+        for column in frame.columns
+    )
+    body_rows = []
+    for _, row in frame.iterrows():
+        cells = []
+        for column in frame.columns:
+            value = row[column]
+            if pd.isna(value):
+                text = "—"
+            elif column in formatters:
+                text = formatters[column].format(value)
+            elif column in numeric_cols:
+                text = f"{value:,}" if float(value).is_integer() else f"{value:,.3f}"
+            else:
+                text = str(value)
+            css_class = "num" if column in numeric_cols else ""
+            cells.append(f'<td class="{css_class}">{escape(text)}</td>')
+        body_rows.append(f"<tr>{''.join(cells)}</tr>")
+    width_class = " ak-table--wide" if len(frame.columns) >= 5 else ""
+    st.markdown(
+        f'<div class="ak-table-wrap"><table class="ak-table{width_class}">'
+        f"<thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table></div>",
+        unsafe_allow_html=True,
+    )
 
 
 def render_score_panel(risk_score: float, model_version: str) -> None:

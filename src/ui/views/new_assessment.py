@@ -28,6 +28,7 @@ from src.ui.components import (
     render_step_bar,
     render_score_panel,
     render_factor_list,
+    render_table,
     render_validation_counters,
 )
 from src.ui.services import (
@@ -313,7 +314,7 @@ def _rejection_table(result: object) -> pd.DataFrame:
 
 
 def _render_financial_preview(feature: pd.Series) -> None:
-    first, second = st.columns(2, gap="large")
+    first, second = st.columns(2, gap="large", vertical_alignment="top")
     with first:
         render_panel_heading("Cash-flow behaviour")
         render_metric_rows(
@@ -346,12 +347,10 @@ def _render_financial_preview(feature: pd.Series) -> None:
 
     with st.expander("Review all model input features"):
         names = [name for name in feature.index if name != "applicant_id"]
-        st.dataframe(
+        render_table(
             pd.DataFrame(
                 {"Feature": names, "Value": [feature[name] for name in names]}
-            ),
-            hide_index=True,
-            use_container_width=True,
+            )
         )
 
 
@@ -374,9 +373,7 @@ def _render_validation_step() -> None:
         )
         if result.rejected_count:
             st.markdown("#### Records needing correction")
-            st.dataframe(
-                _rejection_table(result), hide_index=True, use_container_width=True
-            )
+            render_table(_rejection_table(result))
         if result.warnings:
             with st.expander(f"Review {len(result.warnings)} normalization warnings"):
                 for warning in result.warnings:

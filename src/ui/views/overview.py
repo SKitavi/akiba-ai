@@ -14,6 +14,7 @@ from src.ui.components import (
     render_page_header,
     render_panel_heading,
     render_summary_counters,
+    render_table,
 )
 from src.ui.services import load_assessment_analytics, load_assessment_history
 from src.ui.state import Route, navigate, reset_assessment
@@ -95,7 +96,7 @@ def render_overview() -> None:
         )
         return
 
-    decisions, scores = st.columns(2, gap="large")
+    decisions, scores = st.columns(2, gap="large", vertical_alignment="top")
     with decisions:
         with st.container(border=True):
             render_panel_heading("Decision activity", "Recorded and outstanding")
@@ -141,7 +142,7 @@ def render_overview() -> None:
                 "Intervals describe model output only; they are not policy bands."
             )
 
-    sources, quality = st.columns(2, gap="large")
+    sources, quality = st.columns(2, gap="large", vertical_alignment="top")
     with sources:
         with st.container(border=True):
             render_panel_heading("Evidence sources", "Saved assessments")
@@ -154,7 +155,7 @@ def render_overview() -> None:
                     "Assessments": list(analytics.source_counts.values()),
                 }
             )
-            st.dataframe(source_frame, hide_index=True, use_container_width=True)
+            render_table(source_frame)
     with quality:
         with st.container(border=True):
             render_panel_heading(
@@ -173,20 +174,13 @@ def render_overview() -> None:
                         ],
                     }
                 )
-                st.dataframe(quality_frame, hide_index=True, use_container_width=True)
+                render_table(quality_frame)
             else:
                 st.caption("No ingestion-quality metadata is available for these runs.")
 
     with st.container(border=True):
         render_panel_heading("Recent assessments", f"Latest {len(recent)}")
-        st.dataframe(
-            _recent_frame(recent),
-            hide_index=True,
-            use_container_width=True,
-            column_config={
-                "Model score": st.column_config.NumberColumn(format="%.3f"),
-            },
-        )
+        render_table(_recent_frame(recent), formatters={"Model score": "{:.3f}"})
         if st.button("Open full history", key="overview_history"):
             navigate(Route.HISTORY)
             st.rerun()

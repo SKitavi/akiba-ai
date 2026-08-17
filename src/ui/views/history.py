@@ -13,6 +13,7 @@ from src.ui.components import (
     render_failure_panel,
     render_page_header,
     render_panel_heading,
+    render_table,
 )
 from src.ui.services import load_assessment_history
 from src.ui.state import reset_assessment
@@ -38,13 +39,17 @@ def _history_frame(records: tuple[AssessmentHistoryItem, ...]) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
-                "applicant": item.applicant_id,
-                "assessed": _format_timestamp(item.assessed_at),
-                "model": item.model_version,
-                "risk_score": item.risk_score,
-                "source": _SOURCE_LABELS.get(item.source_key or "", "Unspecified"),
-                "decision": item.decision.title() if item.decision else "Awaiting",
-                "rationale": item.rationale or "",
+                "Applicant": item.applicant_id,
+                "Assessed": _format_timestamp(item.assessed_at),
+                "Model": item.model_version,
+                "Model risk score": item.risk_score,
+                "Evidence source": _SOURCE_LABELS.get(
+                    item.source_key or "", "Unspecified"
+                ),
+                "Officer decision": (
+                    item.decision.title() if item.decision else "Awaiting"
+                ),
+                "Rationale": item.rationale or "",
             }
             for item in records
         ]
@@ -94,19 +99,6 @@ def render_history() -> None:
             return
 
         st.caption(f"Showing {len(history)} persisted assessment records")
-        st.dataframe(
-            _history_frame(history),
-            hide_index=True,
-            use_container_width=True,
-            column_config={
-                "applicant": "Applicant",
-                "assessed": "Assessed",
-                "model": "Model",
-                "risk_score": st.column_config.NumberColumn(
-                    "Model risk score", format="%.3f"
-                ),
-                "source": "Evidence source",
-                "decision": "Officer decision",
-                "rationale": "Rationale",
-            },
+        render_table(
+            _history_frame(history), formatters={"Model risk score": "{:.3f}"}
         )
