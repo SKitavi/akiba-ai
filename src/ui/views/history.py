@@ -12,6 +12,7 @@ from src.ui.components import (
     render_empty_state,
     render_failure_panel,
     render_page_header,
+    render_panel_heading,
 )
 from src.ui.services import load_assessment_history
 from src.ui.state import reset_assessment
@@ -59,51 +60,53 @@ def render_history() -> None:
         eyebrow="Persisted local records",
     )
 
-    search = st.text_input(
-        "Search applicant ID",
-        placeholder="APP_0001",
-        key="history_search",
-    ).strip()
-    try:
-        history = load_assessment_history(limit=500, applicant_query=search or None)
-    except (sqlite3.DatabaseError, OSError, RuntimeError) as exc:
-        render_failure_panel(
-            "History is temporarily unavailable",
-            "The local assessment database could not be read.",
-            technical=str(exc),
-        )
-        return
+    with st.container(border=True):
+        render_panel_heading("Assessment register", "Up to 500 recent records")
+        search = st.text_input(
+            "Search applicant ID",
+            placeholder="APP_0001",
+            key="history_search",
+        ).strip()
+        try:
+            history = load_assessment_history(limit=500, applicant_query=search or None)
+        except (sqlite3.DatabaseError, OSError, RuntimeError) as exc:
+            render_failure_panel(
+                "History is temporarily unavailable",
+                "The local assessment database could not be read.",
+                technical=str(exc),
+            )
+            return
 
-    if not history:
-        render_empty_state(
-            "No matching assessments" if search else "No persisted history",
-            (
-                "Try another applicant ID or clear the search field."
-                if search
-                else "Saved assessments will appear here after you complete the workflow."
-            ),
-        )
-        if not search and st.button(
-            "Start new assessment", type="primary", key="history_start"
-        ):
-            reset_assessment()
-            st.rerun()
-        return
+        if not history:
+            render_empty_state(
+                "No matching assessments" if search else "No persisted history",
+                (
+                    "Try another applicant ID or clear the search field."
+                    if search
+                    else "Saved assessments will appear here after you complete the workflow."
+                ),
+            )
+            if not search and st.button(
+                "Start new assessment", type="primary", key="history_start"
+            ):
+                reset_assessment()
+                st.rerun()
+            return
 
-    st.caption(f"Showing {len(history)} persisted assessment records")
-    st.dataframe(
-        _history_frame(history),
-        hide_index=True,
-        use_container_width=True,
-        column_config={
-            "applicant": "Applicant",
-            "assessed": "Assessed",
-            "model": "Model",
-            "risk_score": st.column_config.NumberColumn(
-                "Model risk score", format="%.3f"
-            ),
-            "source": "Evidence source",
-            "decision": "Officer decision",
-            "rationale": "Rationale",
-        },
-    )
+        st.caption(f"Showing {len(history)} persisted assessment records")
+        st.dataframe(
+            _history_frame(history),
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "applicant": "Applicant",
+                "assessed": "Assessed",
+                "model": "Model",
+                "risk_score": st.column_config.NumberColumn(
+                    "Model risk score", format="%.3f"
+                ),
+                "source": "Evidence source",
+                "decision": "Officer decision",
+                "rationale": "Rationale",
+            },
+        )

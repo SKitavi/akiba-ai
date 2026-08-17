@@ -31,7 +31,7 @@ def main() -> None:
         page_title="AkibaAI · Credit assessment",
         page_icon="A",
         layout="wide",
-        initial_sidebar_state="expanded",
+        initial_sidebar_state="auto",
     )
     inject_theme()
     initialize_state()

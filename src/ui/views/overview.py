@@ -110,7 +110,13 @@ def render_overview() -> None:
                     ],
                 }
             )
-            st.bar_chart(decision_frame, x="Status", y="Assessments")
+            st.bar_chart(
+                decision_frame,
+                x="Status",
+                y="Assessments",
+                color="#0B4A3B",
+                height=270,
+            )
     with scores:
         with st.container(border=True):
             render_panel_heading("Model score distribution", "Fixed score intervals")
@@ -124,7 +130,13 @@ def render_overview() -> None:
                     ],
                 }
             )
-            st.bar_chart(score_frame, x="Score interval", y="Assessments")
+            st.bar_chart(
+                score_frame,
+                x="Score interval",
+                y="Assessments",
+                color="#C18B2F",
+                height=270,
+            )
             st.caption(
                 "Intervals describe model output only; they are not policy bands."
             )

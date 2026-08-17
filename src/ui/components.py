@@ -83,11 +83,15 @@ def render_sidebar() -> None:
 
     with st.sidebar:
         st.markdown(
-            '<div class="ak-sb-brand" aria-label="AkibaAI">'
-            '<span class="ak-sb-mark">A</span>'
+            '<div class="ak-sb-brand">'
+            '<span class="ak-sb-mark">'
+            '<svg viewBox="0 0 32 32" aria-hidden="true">'
+            '<circle cx="16" cy="16" r="13"/>'
+            '<path d="M10 20.5 16 9l6 11.5M12.3 16.3h7.4"/>'
+            "</svg></span>"
             '<div class="ak-sb-brand-text">'
             '<span class="ak-sb-name">AkibaAI</span>'
-            '<span class="ak-sb-product">Credit operations</span>'
+            '<span class="ak-sb-product">Credit intelligence</span>'
             "</div></div>",
             unsafe_allow_html=True,
         )
@@ -106,8 +110,9 @@ def render_sidebar() -> None:
 
         st.markdown(
             '<div class="ak-sb-status">'
+            '<span class="ak-sb-status-label">System status</span>'
             f'<div class="ak-sb-status-row">{_icon("lock", 14)}'
-            "<span>Local processing</span></div>"
+            "<span>Offline workspace</span></div>"
             f'<div class="ak-sb-status-row">{_icon("cpu", 14)}'
             f"<span>{escape(_model_status())}</span></div>"
             '<span class="ak-sb-chip">Synthetic data</span>'
@@ -128,9 +133,12 @@ def render_page_header(
     )
     st.markdown(
         '<header class="ak-page-header">'
-        f"{eyebrow_html}"
-        f"<h1>{escape(title)}</h1>"
-        f"<p>{escape(description)}</p>"
+        '<div class="ak-page-heading-copy">'
+        f"{eyebrow_html}<h1>{escape(title)}</h1>"
+        f"<p>{escape(description)}</p></div>"
+        '<div class="ak-page-context">'
+        '<span class="ak-context-dot"></span>'
+        "<span>Local · Synthetic</span></div>"
         "</header>",
         unsafe_allow_html=True,
     )
@@ -266,20 +274,31 @@ def render_metric_rows(rows: tuple[tuple[str, str], ...]) -> None:
 
 
 def render_score_panel(risk_score: float, model_version: str) -> None:
-    """Render a neutral model output without invented policy thresholds."""
+    """Render a neutral model output without invented policy thresholds.
+
+    The gauge uses a single accent hue with a needle, matching the
+    workstation's dial language — but deliberately has no green/amber/red
+    zones. There is no approved score-to-risk-band mapping, so nothing here
+    implies one.
+    """
     position = max(0.0, min(1.0, risk_score)) * 100
     st.markdown(
         '<section class="ak-score-panel" aria-label="Model risk score">'
-        '<div class="ak-score-label">Model Risk Score</div>'
+        '<div class="ak-score-head">'
+        '<div><span class="ak-score-kicker">Explainable model output</span>'
+        '<div class="ak-score-label">Model risk score</div></div>'
+        f'<span class="ak-score-version">Model version: {escape(model_version)}</span>'
+        "</div>"
         f'<div class="ak-gauge" style="--pct: {position:.1f}" aria-hidden="true">'
         '<div class="ak-gauge-fill"></div>'
         '<div class="ak-gauge-mask"></div>'
+        '<div class="ak-gauge-needle"></div>'
         f'<div class="ak-gauge-value">{risk_score:.3f}</div>'
         "</div>"
         '<div class="ak-gauge-ends"><span>0.0 · Lower</span><span>1.0 · Higher</span></div>'
         "<p>Higher values indicate greater model-estimated risk. This score "
         "supports human review and does not determine the lending decision.</p>"
-        f'<div class="ak-score-model">Model version: {escape(model_version)}</div>'
+        '<div class="ak-score-model">Neutral model output · Human review required</div>'
         "</section>",
         unsafe_allow_html=True,
     )
@@ -291,17 +310,24 @@ def render_factor_list(
     *,
     direction_label: str,
 ) -> None:
-    """Render backend-ranked localized factors with accessible direction words."""
+    """Render backend-ranked localized factors as horizontal SHAP bars."""
     st.markdown(f"#### {title}")
     if not factors:
         st.caption("No material factors were returned in this direction.")
         return
     tone = "danger" if "increas" in direction_label.lower() else "success"
+    magnitude = max((abs(factor.shap_value) for factor in factors), default=0.0)
     items = "".join(
         f'<div class="ak-factor-row {tone}">'
-        f"<div><strong>{escape(factor.feature_label)}</strong>"
-        f"<p>{escape(factor.text)}</p></div>"
-        f"<span>{escape(direction_label)}</span>"
+        '<div class="ak-factor-row-top">'
+        f"<strong>{escape(factor.feature_label)}</strong>"
+        f"<span>{factor.shap_value:+.3f}</span>"
+        "</div>"
+        '<div class="ak-factor-track">'
+        '<div class="ak-factor-fill" style="width: '
+        f'{(abs(factor.shap_value) / magnitude * 100) if magnitude else 0:.1f}%"></div>'
+        "</div>"
+        f"<p>{escape(factor.text)}</p>"
         "</div>"
         for factor in factors
     )
