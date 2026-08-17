@@ -78,7 +78,7 @@ def test_application_loads_and_default_navigation_works(
     assert not app.exception
     button_labels = {button.label for button in app.button}
     assert {"Overview", "New Assessment", "History", "Settings"} <= button_labels
-    assert _has_markdown(app, "Credit assessment workspace")
+    assert _has_markdown(app, "Loan assessment overview")
 
     _button(app, "History").click().run()
     assert not app.exception

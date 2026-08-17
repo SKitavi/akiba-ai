@@ -205,10 +205,10 @@ def render_failure_panel(
 
 
 _SUMMARY_ICON_BY_LABEL: dict[str, str] = {
-    "Assessments": "layers",
-    "Decisions recorded": "check",
-    "Awaiting decision": "history",
-    "Ingestion warnings": "alert",
+    "Total assessments": "layers",
+    "Decisions completed": "check",
+    "Waiting for decision": "history",
+    "Data warnings": "alert",
 }
 
 
@@ -296,9 +296,9 @@ def render_summary_counters(rows: tuple[tuple[str, int], ...]) -> None:
     if len(rows) != 4:
         raise ValueError("A summary strip requires exactly four counters.")
     tones = {
-        "Decisions recorded": "valid",
-        "Awaiting decision": "attention",
-        "Ingestion warnings": "attention",
+        "Decisions completed": "valid",
+        "Waiting for decision": "attention",
+        "Data warnings": "attention",
     }
     _render_kpi_cards(
         tuple(

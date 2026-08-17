@@ -803,6 +803,14 @@ h4.ak-section-title {
   overflow: visible;
 }
 
+.ak-chart-description {
+  color: var(--ak-text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  margin: -0.35rem 0 0.55rem;
+  max-width: 42rem;
+}
+
 .ak-financial-note {
   align-items: center;
   color: var(--ak-text-secondary);

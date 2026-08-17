@@ -29,6 +29,12 @@ _SOURCE_LABELS = {
     "unspecified": "Unspecified",
 }
 
+_DECISION_LABELS = {
+    "APPROVE": "Approved",
+    "REVIEW": "Under review",
+    "DECLINE": "Declined",
+}
+
 _CHART_FONT = 'Inter, "Segoe UI", Arial, sans-serif'
 _FOREST = "#0B4A3B"
 _GOLD = "#C18B2F"
@@ -84,7 +90,7 @@ def _decision_activity_chart(frame: pd.DataFrame):
                 axis=alt.Axis(labelColor=_INK, labelFontWeight=500),
             ),
             color=alt.condition(
-                alt.datum.Status == "Awaiting",
+                alt.datum.Status == "Waiting",
                 alt.value(_GOLD),
                 alt.value(_FOREST),
             ),
@@ -181,7 +187,9 @@ def _recent_frame(records: tuple[AssessmentHistoryItem, ...]) -> pd.DataFrame:
                 "Assessed": _format_timestamp(item.assessed_at),
                 "Model score": item.risk_score,
                 "Officer decision": (
-                    item.decision.title() if item.decision else "Awaiting"
+                    _DECISION_LABELS.get(item.decision, item.decision.title())
+                    if item.decision
+                    else "Waiting for decision"
                 ),
             }
             for item in records
@@ -192,9 +200,8 @@ def _recent_frame(records: tuple[AssessmentHistoryItem, ...]) -> pd.DataFrame:
 def render_overview() -> None:
     """Render analytics calculated from durable, linked backend records."""
     render_page_header(
-        "Credit assessment workspace",
-        "Monitor assessment activity and decision follow-through.",
-        eyebrow="Local operations overview",
+        "Loan assessment overview",
+        "See saved assessments, pending loan decisions, model scores, and data that needs attention.",
     )
 
     if st.button("Start new assessment", type="primary", key="overview_start"):
@@ -207,34 +214,40 @@ def render_overview() -> None:
     except (sqlite3.DatabaseError, OSError, RuntimeError) as exc:
         render_failure_panel(
             "Analytics are temporarily unavailable",
-            "The local assessment database could not be read.",
+            "The saved assessment data could not be read.",
             technical=str(exc),
         )
         return
 
     render_summary_counters(
         (
-            ("Assessments", analytics.total_assessments),
-            ("Decisions recorded", analytics.recorded_decisions),
-            ("Awaiting decision", analytics.awaiting_decision),
-            ("Ingestion warnings", analytics.warning_count),
+            ("Total assessments", analytics.total_assessments),
+            ("Decisions completed", analytics.recorded_decisions),
+            ("Waiting for decision", analytics.awaiting_decision),
+            ("Data warnings", analytics.warning_count),
         )
     )
 
     if not analytics.total_assessments:
         render_empty_state(
-            "No persisted assessments yet",
-            "Complete and save an assessment to begin building the operational view.",
+            "No saved assessments yet",
+            "Complete and save an assessment to start building this overview.",
         )
         return
 
     decisions, scores = st.columns(2, gap="large", vertical_alignment="top")
     with decisions:
         with st.container(border=True):
-            render_panel_heading("Decision activity", "Recorded and outstanding")
+            render_panel_heading("Loan decision status", "Completed and pending")
+            st.markdown(
+                '<p class="ak-chart-description">Shows how many loan applications '
+                "are approved, declined, under review, or waiting for an officer's "
+                "decision.</p>",
+                unsafe_allow_html=True,
+            )
             decision_frame = pd.DataFrame(
                 {
-                    "Status": ["Awaiting", "Approve", "Review", "Decline"],
+                    "Status": ["Waiting", "Approved", "Under review", "Declined"],
                     "Assessments": [
                         analytics.awaiting_decision,
                         analytics.decision_counts["APPROVE"],
@@ -251,7 +264,13 @@ def render_overview() -> None:
             )
     with scores:
         with st.container(border=True):
-            render_panel_heading("Model score distribution", "Fixed score intervals")
+            render_panel_heading("Model score ranges", "Saved assessments")
+            st.markdown(
+                '<p class="ak-chart-description">Shows how assessments are grouped '
+                "by model score. The score supports review but does not make the "
+                "final lending decision.</p>",
+                unsafe_allow_html=True,
+            )
             score_frame = pd.DataFrame(
                 {
                     "Score interval": [
@@ -272,10 +291,10 @@ def render_overview() -> None:
     sources, quality = st.columns(2, gap="large", vertical_alignment="top")
     with sources:
         with st.container(border=True):
-            render_panel_heading("Evidence sources", "Saved assessments")
+            render_panel_heading("Where the data came from", "Saved assessments")
             source_frame = pd.DataFrame(
                 {
-                    "Source": [
+                    "Data source": [
                         _SOURCE_LABELS.get(key, key.replace("_", " ").title())
                         for key in analytics.source_counts
                     ],
@@ -286,14 +305,19 @@ def render_overview() -> None:
     with quality:
         with st.container(border=True):
             render_panel_heading(
-                "Ingestion quality",
-                f"{analytics.assessments_with_audit} assessed batches",
+                "Data quality checks",
+                f"{analytics.assessments_with_audit} assessments checked",
             )
             if analytics.assessments_with_audit:
                 quality_frame = pd.DataFrame(
                     {
-                        "Measure": ["Processed", "Valid", "Rejected", "Warnings"],
-                        "Records": [
+                        "Check": [
+                            "Transactions checked",
+                            "Transactions accepted",
+                            "Transactions not used",
+                            "Data warnings",
+                        ],
+                        "Transactions": [
                             analytics.processed_records,
                             analytics.valid_records,
                             analytics.rejected_records,
@@ -303,11 +327,13 @@ def render_overview() -> None:
                 )
                 render_table(quality_frame)
             else:
-                st.caption("No ingestion-quality metadata is available for these runs.")
+                st.caption(
+                    "Data-quality details are not available for these assessments."
+                )
 
     with st.container(border=True):
         render_panel_heading("Recent assessments", f"Latest {len(recent)}")
         render_table(_recent_frame(recent), formatters={"Model score": "{:.3f}"})
-        if st.button("Open full history", key="overview_history"):
+        if st.button("View all assessments", key="overview_history"):
             navigate(Route.HISTORY)
             st.rerun()
