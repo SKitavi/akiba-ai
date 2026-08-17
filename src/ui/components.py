@@ -444,16 +444,30 @@ def render_score_panel(risk_score: float, model_version: str) -> None:
         '<div class="ak-score-label">Model risk score</div></div>'
         f'<span class="ak-score-version">Model version: {escape(model_version)}</span>'
         "</div>"
-        '<div class="ak-score-reading">'
-        f"<strong>{score_text}</strong><span>Exact model score</span></div>"
-        '<div class="ak-score-scale" aria-label="Model score position">'
+        f'<div class="ak-score-scale" aria-label="Model score {score_text}; '
+        f'{scale_mode}">'
         '<div class="ak-score-scale-head"><span>Score position</span>'
         f"<small>{scale_mode}</small></div>"
-        f'<div class="ak-score-scale-track" style="--score-pct: '
-        f'{scale_position:.1f}%"><span></span></div>'
-        '<div class="ak-score-scale-ends">'
-        f"<span>{scale_ticks[0]}</span><span>{scale_ticks[1]}</span>"
-        f"<span>{scale_ticks[2]}</span></div></div>"
+        '<div class="ak-score-curve"><svg viewBox="0 0 280 160" '
+        'role="img" aria-hidden="true">'
+        '<defs><linearGradient id="ak-score-arc-gradient" x1="0" y1="0" '
+        'x2="1" y2="0"><stop offset="0%" stop-color="#0b4a3b"/>'
+        '<stop offset="100%" stop-color="#c18b2f"/></linearGradient></defs>'
+        '<path class="ak-score-curve-track" pathLength="100" '
+        'd="M 25 130 A 115 115 0 0 1 255 130"/>'
+        '<path class="ak-score-curve-progress" pathLength="100" '
+        f'stroke-dasharray="{scale_position:.1f} 100" '
+        'd="M 25 130 A 115 115 0 0 1 255 130"/>'
+        f'<text class="ak-score-curve-value" x="140" y="103" '
+        f'text-anchor="middle">{score_text}</text>'
+        '<text class="ak-score-curve-caption" x="140" y="120" '
+        'text-anchor="middle">Exact model score</text>'
+        f'<text class="ak-score-curve-tick" x="18" y="151">{scale_ticks[0]}</text>'
+        f'<text class="ak-score-curve-tick" x="140" y="151" '
+        f'text-anchor="middle">{scale_ticks[1]}</text>'
+        f'<text class="ak-score-curve-tick" x="262" y="151" '
+        f'text-anchor="end">{scale_ticks[2]}</text>'
+        "</svg></div></div>"
         "</section>",
         unsafe_allow_html=True,
     )

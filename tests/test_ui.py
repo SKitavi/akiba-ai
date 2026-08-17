@@ -81,9 +81,10 @@ def test_small_model_score_has_truthful_magnified_detail(
     render_score_panel(0.005, "test_v1")
 
     html = "".join(rendered)
-    assert "<strong>0.0050</strong>" in html
+    assert ">0.0050</text>" in html
     assert "Magnified 0.000–0.010 view" in html
-    assert "--score-pct: 50.0%" in html
+    assert 'class="ak-score-curve-progress"' in html
+    assert 'stroke-dasharray="50.0 100"' in html
     assert "Magnified because" not in html
     assert "loan officer makes the final decision" not in html
 
@@ -190,9 +191,7 @@ def test_zero_valid_records_block_assessment() -> None:
     # (Match the HTML attribute, not just the class name, so the injected
     # theme.css — which also contains the literal string "ak-table-wrap" in
     # its own selectors — doesn't count as a second match.)
-    assert sum(
-        'class="ak-table-wrap"' in str(item.value) for item in app.markdown
-    ) == 1
+    assert sum('class="ak-table-wrap"' in str(item.value) for item in app.markdown) == 1
 
 
 def test_model_missing_state_is_understandable(
