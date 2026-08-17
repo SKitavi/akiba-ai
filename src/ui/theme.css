@@ -899,6 +899,53 @@ button {
 }
 
 /* ---------------------------------------------------------------- */
+/* Radio options — consistent "card" styling for every st.radio, so    */
+/* nothing in the workflow reverts to a bare default control. The     */
+/* more specific Decision-pill rules below layer status colour on top */
+/* of this for the Approve/Review/Decline control specifically.       */
+/* ---------------------------------------------------------------- */
+
+[data-testid="stRadio"] div[role="radiogroup"] {
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+[data-testid="stRadio"] div[role="radiogroup"] > label {
+  background: var(--ak-surface);
+  border: 1.5px solid var(--ak-border);
+  border-radius: var(--ak-radius-sm);
+  padding: 0.55rem 0.85rem;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
+  border-color: var(--ak-border-strong);
+}
+
+[data-testid="stRadio"] div[role="radiogroup"] > label:has([aria-checked="true"]) {
+  background: var(--ak-primary-soft);
+  border-color: var(--ak-primary);
+}
+
+[data-testid="stRadio"] div[role="radiogroup"] > label p {
+  font-weight: 600;
+}
+
+[data-testid="stRadio"] div[role="radiogroup"] > label [data-testid="stCaptionContainer"] {
+  margin-top: 0.15rem;
+}
+
+.st-key-source_widget [data-testid="stRadio"] div[role="radiogroup"] {
+  align-items: flex-start;
+}
+
+.st-key-source_widget [data-testid="stRadio"] div[role="radiogroup"] > label {
+  box-sizing: border-box;
+  max-width: 100%;
+  width: 15rem;
+}
+
+/* ---------------------------------------------------------------- */
 /* Officer decision — pill-styled radio (Approve / Review / Decline). */
 /* Status colour is appropriate here: it applies only after the       */
 /* officer's own choice, never to the model score itself.             */
