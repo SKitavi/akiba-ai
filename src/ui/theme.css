@@ -66,13 +66,21 @@ footer {
   display: flex !important;
 }
 
-[data-testid="stToolbar"] button:not([data-testid="stExpandSidebarButton"]) {
+[data-testid="stToolbar"] div:has([data-testid="stExpandSidebarButton"]) {
+  display: flex !important;
+  height: auto !important;
+  width: auto !important;
+}
+
+[data-testid="stAppDeployButton"] {
   display: none !important;
 }
 
 .block-container {
+  margin-inline: auto;
   max-width: 1420px;
   padding: 1.1rem 2rem 3.5rem;
+  width: 100%;
 }
 
 p,
@@ -168,9 +176,13 @@ button {
   display: flex !important;
   height: 36px !important;
   justify-content: center;
-  margin: 0.45rem !important;
+  left: 0.65rem;
+  margin: 0 !important;
   min-width: 36px !important;
+  position: fixed !important;
+  top: 0.55rem;
   width: 36px !important;
+  z-index: 1000001;
 }
 
 [data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"]::before {
@@ -510,6 +522,8 @@ button {
   align-items: center;
   border-bottom: 1px solid var(--ak-border);
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.75rem;
   justify-content: space-between;
   margin: -0.05rem 0 0.75rem;
   padding-bottom: 0.65rem;
@@ -522,9 +536,15 @@ button {
   font-weight: 700;
 }
 
+.ak-panel-title {
+  flex: 1 1 10rem;
+}
+
 .ak-panel-meta {
   color: var(--ak-muted);
+  flex: 0 1 auto;
   font-size: 0.74rem;
+  margin-left: auto;
 }
 
 .ak-empty-state {
@@ -1064,6 +1084,19 @@ textarea:focus-visible,
   font-weight: 700;
 }
 
+[data-testid="stButton"] button p,
+[data-testid="stFormSubmitButton"] button p {
+  overflow-wrap: normal;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  .ak-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .block-container {
     padding: 0.65rem 1rem 2.5rem;
@@ -1096,6 +1129,12 @@ textarea:focus-visible,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .ak-panel-meta {
+    flex-basis: 100%;
+    margin-left: 0;
+    text-align: left;
+  }
+
   .ak-step-label {
     display: none;
   }
@@ -1103,6 +1142,36 @@ textarea:focus-visible,
   .ak-step {
     min-width: 3.2rem;
     padding-inline: 0.4rem;
+  }
+}
+
+@media (max-width: 899px) {
+  [data-testid="stMain"] {
+    left: 0 !important;
+    width: 100% !important;
+  }
+
+  [data-testid="stSidebar"] {
+    height: 100dvh !important;
+    inset-block: 0 !important;
+    position: fixed !important;
+    z-index: 1000000;
+  }
+
+  [data-testid="stSidebarCollapseButton"] {
+    position: absolute !important;
+    right: 0.75rem !important;
+    top: 0.6rem !important;
+    z-index: 1000001 !important;
+  }
+
+  [data-testid="stAppViewContainer"]:has([data-testid="stExpandSidebarButton"])
+    [data-testid="stSidebar"] {
+    transform: translateX(-100%) !important;
+  }
+
+  .block-container {
+    padding-top: 2.8rem;
   }
 }
 
@@ -1115,11 +1184,6 @@ textarea:focus-visible,
     max-width: 82vw !important;
     min-width: 0 !important;
     width: 276px !important;
-  }
-
-  [data-testid="stAppViewContainer"]:has([data-testid="stExpandSidebarButton"])
-    [data-testid="stSidebar"] {
-    transform: translateX(-100%) !important;
   }
 
   .block-container {
@@ -1171,7 +1235,7 @@ textarea:focus-visible,
   }
 
   .ak-panel-meta {
-    text-align: right;
+    text-align: left;
   }
 
   .ak-gauge {

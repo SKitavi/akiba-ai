@@ -60,7 +60,7 @@ def render_overview() -> None:
         eyebrow="Local operations overview",
     )
 
-    action, note = st.columns([1, 4], vertical_alignment="center")
+    action, note = st.columns([2, 5], vertical_alignment="center")
     with action:
         if st.button("Start new assessment", type="primary", key="overview_start"):
             reset_assessment()
