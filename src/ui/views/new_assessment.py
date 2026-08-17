@@ -364,7 +364,10 @@ def _render_validation_step() -> None:
                 "An assessment cannot run without accepted transaction evidence.",
             )
         else:
-            st.markdown("#### Financial summary")
+            st.markdown(
+                '<h4 class="ak-section-title">Financial summary</h4>',
+                unsafe_allow_html=True,
+            )
             _render_financial_preview(st.session_state.feature_preview)
 
         _, previous, proceed = st.columns([5, 1.35, 2.2])

@@ -664,6 +664,135 @@ button {
   color: var(--ak-text);
 }
 
+/* Validation uses a denser information hierarchy than dashboard KPIs. */
+.ak-validation-summary {
+  margin: 0.1rem 0 0;
+}
+
+.ak-validation-grid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ak-validation-card {
+  align-items: center;
+  background: var(--ak-surface);
+  border: 1px solid var(--ak-border);
+  border-left: 3px solid var(--ak-primary);
+  border-radius: var(--ak-radius);
+  box-shadow: var(--ak-shadow-sm);
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: 32px minmax(0, 1fr);
+  min-height: 74px;
+  padding: 0.65rem 0.75rem;
+}
+
+.ak-validation-card.valid,
+.ak-validation-card.clear {
+  border-left-color: var(--ak-success);
+}
+
+.ak-validation-card.attention {
+  border-left-color: var(--ak-accent);
+}
+
+.ak-validation-icon {
+  align-items: center;
+  align-self: start;
+  background: var(--ak-primary-soft);
+  border: 1px solid var(--ak-primary-border);
+  border-radius: 8px;
+  color: var(--ak-primary);
+  display: flex;
+  height: 32px;
+  justify-content: center;
+  margin-top: 0.05rem;
+  width: 32px;
+}
+
+.ak-validation-card.valid .ak-validation-icon,
+.ak-validation-card.clear .ak-validation-icon {
+  background: var(--ak-success-soft);
+  border-color: #bbebc9;
+  color: var(--ak-success);
+}
+
+.ak-validation-card.attention .ak-validation-icon {
+  background: var(--ak-accent-soft);
+  border-color: var(--ak-accent-border);
+  color: var(--ak-accent-hover);
+}
+
+.ak-validation-body {
+  display: grid;
+  min-width: 0;
+}
+
+.ak-validation-label {
+  color: var(--ak-text-secondary);
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.ak-validation-value {
+  color: var(--ak-text);
+  font-size: 1.24rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  margin-top: 0.18rem;
+}
+
+.ak-validation-card.valid .ak-validation-value {
+  color: var(--ak-success);
+}
+
+.ak-validation-detail {
+  color: var(--ak-muted);
+  font-size: 0.62rem;
+  line-height: 1.25;
+  margin-top: 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+.ak-validation-health {
+  align-items: center;
+  background: var(--ak-surface-muted);
+  border-radius: var(--ak-radius-sm);
+  color: var(--ak-text-secondary);
+  display: flex;
+  font-size: 0.7rem;
+  font-weight: 550;
+  gap: 0.45rem;
+  line-height: 1.35;
+  margin-top: 0.6rem;
+  padding: 0.48rem 0.65rem;
+}
+
+.ak-validation-health > span {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.ak-validation-health.clear {
+  background: var(--ak-success-soft);
+  color: #166534;
+}
+
+.ak-validation-health.attention {
+  background: var(--ak-accent-soft);
+  color: #744c0c;
+}
+
+h4.ak-section-title {
+  margin: 0.85rem 0 0.2rem !important;
+}
+
 .st-key-decision_activity_chart,
 .st-key-score_distribution_chart {
   margin-top: -0.15rem;
@@ -1367,6 +1496,10 @@ textarea:focus-visible,
   .ak-kpi-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .ak-validation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
@@ -1398,6 +1531,10 @@ textarea:focus-visible,
   }
 
   .ak-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ak-validation-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1510,6 +1647,30 @@ textarea:focus-visible,
   .ak-kpi-label {
     font-size: 0.66rem;
     line-height: 1.2;
+  }
+
+  .ak-validation-grid {
+    gap: 0.55rem;
+  }
+
+  .ak-validation-card {
+    gap: 0.5rem;
+    grid-template-columns: 27px minmax(0, 1fr);
+    min-height: 70px;
+    padding: 0.6rem;
+  }
+
+  .ak-validation-icon {
+    height: 27px;
+    width: 27px;
+  }
+
+  .ak-validation-value {
+    font-size: 1.08rem;
+  }
+
+  .ak-validation-detail {
+    font-size: 0.58rem;
   }
 
   .ak-panel-heading {

@@ -232,14 +232,62 @@ def render_validation_counters(
     rejected: int,
     warnings: int,
 ) -> None:
-    """Render validation counts with words as well as restrained colour."""
-    _render_kpi_cards(
+    """Render a compact validation summary with explicit quality context."""
+    valid_rate = (valid / processed * 100) if processed else 0.0
+    rate_text = (
+        f"{valid_rate:.0f}% acceptance rate"
+        if valid_rate.is_integer()
+        else f"{valid_rate:.1f}% acceptance rate"
+    )
+    cards = (
+        ("Processed", processed, "neutral", "layers", "Records received"),
+        ("Valid", valid, "valid", "check", rate_text),
         (
-            ("Processed", processed, "neutral", "layers"),
-            ("Valid", valid, "valid", "check"),
-            ("Rejected", rejected, "attention" if rejected else "neutral", "alert"),
-            ("Warnings", warnings, "attention" if warnings else "neutral", "alert"),
-        )
+            "Rejected",
+            rejected,
+            "attention" if rejected else "clear",
+            "alert" if rejected else "check",
+            "Needs correction" if rejected else "No rejected records",
+        ),
+        (
+            "Warnings",
+            warnings,
+            "attention" if warnings else "clear",
+            "alert" if warnings else "check",
+            "Review recommended" if warnings else "No warnings detected",
+        ),
+    )
+    cards_html = "".join(
+        f'<div class="ak-validation-card {tone}">'
+        f'<div class="ak-validation-icon">{_icon(icon_name, 14)}</div>'
+        '<div class="ak-validation-body">'
+        f'<span class="ak-validation-label">{escape(label)}</span>'
+        f'<strong class="ak-validation-value">{value:,}</strong>'
+        f'<small class="ak-validation-detail">{escape(detail)}</small>'
+        "</div></div>"
+        for label, value, tone, icon_name, detail in cards
+    )
+
+    if not processed:
+        health_tone = "neutral"
+        health_text = "No records are available for validation."
+        health_icon = "layers"
+    elif valid == processed and not rejected and not warnings:
+        health_tone = "clear"
+        health_text = "No validation issues detected. All processed records are ready."
+        health_icon = "check"
+    else:
+        health_tone = "attention"
+        health_text = "Review the flagged validation results before continuing."
+        health_icon = "alert"
+
+    st.markdown(
+        '<section class="ak-validation-summary" aria-label="Validation summary">'
+        f'<div class="ak-validation-grid">{cards_html}</div>'
+        f'<div class="ak-validation-health {health_tone}">'
+        f"<span>{_icon(health_icon, 13)}</span>{escape(health_text)}</div>"
+        "</section>",
+        unsafe_allow_html=True,
     )
 
 
