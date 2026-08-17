@@ -272,6 +272,15 @@ def test_complete_assessment_language_and_persistence_workflow(
     assert app.session_state["decision_saved"] is True
     assert app.session_state["session_history"][0]["decision"] == "Review"
 
+    _button(app, "Start new assessment").click().run()
+
+    assert not app.exception
+    assert app.session_state["assessment_step"] == 0
+    assert app.session_state["decision_value"] is None
+    assert app.session_state["decision_rationale"] == ""
+    assert app.session_state["session_history"][0]["decision"] == "Review"
+    assert _has_markdown(app, "Applicant")
+
 
 def test_upload_adapters_reject_empty_input() -> None:
     with pytest.raises(UIInputError, match="empty"):

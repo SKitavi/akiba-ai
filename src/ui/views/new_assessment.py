@@ -660,9 +660,11 @@ def _render_decision_step() -> None:
     if st.session_state.decision_saved:
         first, second = st.columns(2)
         with first:
-            if st.button("Start new assessment", use_container_width=True):
-                reset_assessment()
-                st.rerun()
+            st.button(
+                "Start new assessment",
+                use_container_width=True,
+                on_click=reset_assessment,
+            )
         with second:
             if st.button("View session history", use_container_width=True):
                 navigate(Route.HISTORY)
