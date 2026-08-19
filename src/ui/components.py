@@ -5,6 +5,7 @@ from __future__ import annotations
 from html import escape
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 from src.model.loader import resolve_model_path
@@ -78,16 +79,24 @@ def _model_status() -> str:
 
 
 def render_sidebar() -> None:
-    """Render brand, task navigation, and honest local-environment status."""
+    """Render the AkibaAI brand and primary workspace navigation."""
     current_route = Route(st.session_state.route)
 
     with st.sidebar:
         st.markdown(
-            '<div class="ak-sb-brand" aria-label="AkibaAI">'
-            '<span class="ak-sb-mark">A</span>'
+            '<div class="ak-sb-brand">'
+            '<span class="ak-sb-mark">'
+            '<svg viewBox="0 0 40 40" aria-hidden="true">'
+            '<path class="ak-mark-frame" d="M20 2.5 35 11v18L20 37.5 5 29V11Z"/>'
+            '<path class="ak-mark-signal" d="m10.5 27 7.2-14 5.5 10 6.3-12"/>'
+            '<circle class="ak-mark-node" cx="10.5" cy="27" r="1.8"/>'
+            '<circle class="ak-mark-node" cx="17.7" cy="13" r="1.8"/>'
+            '<circle class="ak-mark-node" cx="23.2" cy="23" r="1.8"/>'
+            '<circle class="ak-mark-node" cx="29.5" cy="11" r="1.8"/>'
+            "</svg></span>"
             '<div class="ak-sb-brand-text">'
-            '<span class="ak-sb-name">AkibaAI</span>'
-            '<span class="ak-sb-product">Credit operations</span>'
+            '<span class="ak-sb-name">Akiba<span>AI</span></span>'
+            '<span class="ak-sb-product">Credit intelligence</span>'
             "</div></div>",
             unsafe_allow_html=True,
         )
@@ -104,17 +113,6 @@ def render_sidebar() -> None:
                 st.session_state.route = route.value
                 st.rerun()
 
-        st.markdown(
-            '<div class="ak-sb-status">'
-            f'<div class="ak-sb-status-row">{_icon("lock", 14)}'
-            "<span>Local processing</span></div>"
-            f'<div class="ak-sb-status-row">{_icon("cpu", 14)}'
-            f"<span>{escape(_model_status())}</span></div>"
-            '<span class="ak-sb-chip">Synthetic data</span>'
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
 
 def render_page_header(
     title: str,
@@ -128,9 +126,12 @@ def render_page_header(
     )
     st.markdown(
         '<header class="ak-page-header">'
-        f"{eyebrow_html}"
-        f"<h1>{escape(title)}</h1>"
-        f"<p>{escape(description)}</p>"
+        '<div class="ak-page-heading-copy">'
+        f"{eyebrow_html}<h1>{escape(title)}</h1>"
+        f"<p>{escape(description)}</p></div>"
+        '<div class="ak-page-context">'
+        '<span class="ak-context-dot"></span>'
+        "<span>Local · Synthetic</span></div>"
         "</header>",
         unsafe_allow_html=True,
     )
@@ -204,10 +205,10 @@ def render_failure_panel(
 
 
 _SUMMARY_ICON_BY_LABEL: dict[str, str] = {
-    "Assessments": "layers",
-    "Decisions recorded": "check",
-    "Awaiting decision": "history",
-    "Ingestion warnings": "alert",
+    "Total assessments": "layers",
+    "Decisions completed": "check",
+    "Waiting for decision": "history",
+    "Data warnings": "alert",
 }
 
 
@@ -231,14 +232,62 @@ def render_validation_counters(
     rejected: int,
     warnings: int,
 ) -> None:
-    """Render validation counts with words as well as restrained colour."""
-    _render_kpi_cards(
+    """Render a compact validation summary with explicit quality context."""
+    valid_rate = (valid / processed * 100) if processed else 0.0
+    rate_text = (
+        f"{valid_rate:.0f}% acceptance rate"
+        if valid_rate.is_integer()
+        else f"{valid_rate:.1f}% acceptance rate"
+    )
+    cards = (
+        ("Processed", processed, "neutral", "layers", "Records received"),
+        ("Valid", valid, "valid", "check", rate_text),
         (
-            ("Processed", processed, "neutral", "layers"),
-            ("Valid", valid, "valid", "check"),
-            ("Rejected", rejected, "attention" if rejected else "neutral", "alert"),
-            ("Warnings", warnings, "attention" if warnings else "neutral", "alert"),
-        )
+            "Rejected",
+            rejected,
+            "attention" if rejected else "clear",
+            "alert" if rejected else "check",
+            "Needs correction" if rejected else "No rejected records",
+        ),
+        (
+            "Warnings",
+            warnings,
+            "attention" if warnings else "clear",
+            "alert" if warnings else "check",
+            "Review recommended" if warnings else "No warnings detected",
+        ),
+    )
+    cards_html = "".join(
+        f'<div class="ak-validation-card {tone}">'
+        f'<div class="ak-validation-icon">{_icon(icon_name, 14)}</div>'
+        '<div class="ak-validation-body">'
+        f'<span class="ak-validation-label">{escape(label)}</span>'
+        f'<strong class="ak-validation-value">{value:,}</strong>'
+        f'<small class="ak-validation-detail">{escape(detail)}</small>'
+        "</div></div>"
+        for label, value, tone, icon_name, detail in cards
+    )
+
+    if not processed:
+        health_tone = "neutral"
+        health_text = "No records are available for validation."
+        health_icon = "layers"
+    elif valid == processed and not rejected and not warnings:
+        health_tone = "clear"
+        health_text = "No validation issues detected. All processed records are ready."
+        health_icon = "check"
+    else:
+        health_tone = "attention"
+        health_text = "Review the flagged validation results before continuing."
+        health_icon = "alert"
+
+    st.markdown(
+        '<section class="ak-validation-summary" aria-label="Validation summary">'
+        f'<div class="ak-validation-grid">{cards_html}</div>'
+        f'<div class="ak-validation-health {health_tone}">'
+        f"<span>{_icon(health_icon, 13)}</span>{escape(health_text)}</div>"
+        "</section>",
+        unsafe_allow_html=True,
     )
 
 
@@ -246,40 +295,179 @@ def render_summary_counters(rows: tuple[tuple[str, int], ...]) -> None:
     """Render four labeled operational totals in the shared summary strip."""
     if len(rows) != 4:
         raise ValueError("A summary strip requires exactly four counters.")
+    tones = {
+        "Decisions completed": "valid",
+        "Waiting for decision": "attention",
+        "Data warnings": "attention",
+    }
     _render_kpi_cards(
         tuple(
-            (label, value, "neutral", _SUMMARY_ICON_BY_LABEL.get(label, "layers"))
+            (
+                label,
+                value,
+                tones.get(label, "neutral") if value else "neutral",
+                _SUMMARY_ICON_BY_LABEL.get(label, "layers"),
+            )
             for label, value in rows
         )
     )
 
 
-def render_metric_rows(rows: tuple[tuple[str, str], ...]) -> None:
-    """Render compact label/value rows for financial behaviour."""
-    body = "".join(
-        '<div class="ak-metric-row">'
-        f"<span>{escape(label)}</span><strong>{escape(value)}</strong>"
-        "</div>"
-        for label, value in rows
+def render_financial_summary(
+    *,
+    inflows: str,
+    outflows: str,
+    net_flow: str,
+    negative_months: str,
+    transactions_per_month: str,
+    active_months: str,
+    mean_balance: str,
+    low_balance_rate: str,
+) -> None:
+    """Render the validated financial features as two balanced analysis cards."""
+
+    def metric_row(label: str, value: str, unit: str = "") -> str:
+        unit_html = f"<small>{escape(unit)}</small>" if unit else ""
+        return (
+            '<div class="ak-financial-metric">'
+            f"<span>{escape(label)}</span><strong>{escape(value)}{unit_html}</strong>"
+            "</div>"
+        )
+
+    cash_rows = "".join(
+        (
+            metric_row("Observed inflows", inflows, "units"),
+            metric_row("Observed outflows", outflows, "units"),
+            metric_row("Negative-flow months", negative_months),
+        )
     )
-    st.markdown(f'<div class="ak-metric-list">{body}</div>', unsafe_allow_html=True)
+    activity_rows = "".join(
+        (
+            metric_row("Transactions / month", transactions_per_month),
+            metric_row("Active months", active_months),
+            metric_row("Low-balance rate", low_balance_rate),
+        )
+    )
+    st.markdown(
+        '<div class="ak-financial-note">'
+        '<span aria-hidden="true">i</span>'
+        "Amounts remain in provider wallet units. No currency conversion has "
+        "been inferred.</div>"
+        '<div class="ak-financial-grid">'
+        '<section class="ak-financial-card cash-flow">'
+        '<div class="ak-financial-card-heading">'
+        "<span>Cash-flow behaviour</span><small>Observed movement</small></div>"
+        '<div class="ak-financial-primary">'
+        "<span>Net flow</span>"
+        f"<strong>{escape(net_flow)}<small>units</small></strong></div>"
+        f'<div class="ak-financial-metrics">{cash_rows}</div></section>'
+        '<section class="ak-financial-card activity">'
+        '<div class="ak-financial-card-heading">'
+        "<span>Account activity</span><small>Usage pattern</small></div>"
+        '<div class="ak-financial-primary">'
+        "<span>Mean balance</span>"
+        f"<strong>{escape(mean_balance)}<small>units</small></strong></div>"
+        f'<div class="ak-financial-metrics">{activity_rows}</div></section>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def render_table(
+    frame: pd.DataFrame, *, formatters: dict[str, str] | None = None
+) -> None:
+    """Render a short, fully-themed HTML table.
+
+    ``st.dataframe`` draws its grid onto a canvas for performance, so CSS can
+    only reach its outer border — never the header fill, row dividers, or
+    hover state. For small, fixed-length listings (not the 500-row history
+    register, which keeps ``st.dataframe`` for virtualization), this renders
+    plain HTML instead so it can match the workstation's palette exactly.
+    """
+    formatters = formatters or {}
+    numeric_cols = {
+        column
+        for column in frame.columns
+        if pd.api.types.is_numeric_dtype(frame[column])
+    }
+    head = "".join(
+        f'<th scope="col" class="{"num" if column in numeric_cols else ""}">'
+        f"{escape(str(column))}</th>"
+        for column in frame.columns
+    )
+    body_rows = []
+    for _, row in frame.iterrows():
+        cells = []
+        for column in frame.columns:
+            value = row[column]
+            if pd.isna(value):
+                text = "—"
+            elif column in formatters:
+                text = formatters[column].format(value)
+            elif column in numeric_cols:
+                text = f"{value:,}" if float(value).is_integer() else f"{value:,.3f}"
+            else:
+                text = str(value)
+            css_class = "num" if column in numeric_cols else ""
+            cells.append(f'<td class="{css_class}">{escape(text)}</td>')
+        body_rows.append(f"<tr>{''.join(cells)}</tr>")
+    width_class = " ak-table--wide" if len(frame.columns) >= 5 else ""
+    st.markdown(
+        f'<div class="ak-table-wrap"><table class="ak-table{width_class}">'
+        f"<thead><tr>{head}</tr></thead><tbody>{''.join(body_rows)}</tbody></table></div>",
+        unsafe_allow_html=True,
+    )
 
 
 def render_score_panel(risk_score: float, model_version: str) -> None:
-    """Render a neutral model output without invented policy thresholds."""
-    position = max(0.0, min(1.0, risk_score)) * 100
+    """Render a neutral model output without invented policy thresholds.
+
+    The score uses one neutral position scale without green/amber/red policy
+    zones. Scores up to 0.010 use a clearly labelled magnified scale so small
+    changes remain visible without implying invented risk bands.
+    """
+    clamped_score = max(0.0, min(1.0, risk_score))
+    score_text = f"{risk_score:.4f}" if clamped_score < 0.01 else f"{risk_score:.3f}"
+    magnified = clamped_score <= 0.01
+    scale_maximum = 0.01 if magnified else 1.0
+    scale_position = clamped_score / scale_maximum * 100
+    scale_mode = "Magnified 0.000–0.010 view" if magnified else "Full 0–1 view"
+    scale_ticks = (
+        ("0.000", "0.005", "0.010")
+        if magnified
+        else ("0.0 · Lower", "0.5", "1.0 · Higher")
+    )
     st.markdown(
         '<section class="ak-score-panel" aria-label="Model risk score">'
-        '<div class="ak-score-label">Model Risk Score</div>'
-        f'<div class="ak-gauge" style="--pct: {position:.1f}" aria-hidden="true">'
-        '<div class="ak-gauge-fill"></div>'
-        '<div class="ak-gauge-mask"></div>'
-        f'<div class="ak-gauge-value">{risk_score:.3f}</div>'
+        '<div class="ak-score-head">'
+        '<div><span class="ak-score-kicker">Explainable model output</span>'
+        '<div class="ak-score-label">Model risk score</div></div>'
+        f'<span class="ak-score-version">Model version: {escape(model_version)}</span>'
         "</div>"
-        '<div class="ak-gauge-ends"><span>0.0 · Lower</span><span>1.0 · Higher</span></div>'
-        "<p>Higher values indicate greater model-estimated risk. This score "
-        "supports human review and does not determine the lending decision.</p>"
-        f'<div class="ak-score-model">Model version: {escape(model_version)}</div>'
+        f'<div class="ak-score-scale" aria-label="Model score {score_text}; '
+        f'{scale_mode}">'
+        '<div class="ak-score-scale-head"><span>Score position</span>'
+        f"<small>{scale_mode}</small></div>"
+        '<div class="ak-score-curve"><svg viewBox="0 0 280 160" '
+        'role="img" aria-hidden="true">'
+        '<defs><linearGradient id="ak-score-arc-gradient" x1="0" y1="0" '
+        'x2="1" y2="0"><stop offset="0%" stop-color="#0b4a3b"/>'
+        '<stop offset="100%" stop-color="#c18b2f"/></linearGradient></defs>'
+        '<path class="ak-score-curve-track" pathLength="100" '
+        'd="M 25 130 A 115 115 0 0 1 255 130"/>'
+        '<path class="ak-score-curve-progress" pathLength="100" '
+        f'stroke-dasharray="{scale_position:.1f} 100" '
+        'd="M 25 130 A 115 115 0 0 1 255 130"/>'
+        f'<text class="ak-score-curve-value" x="140" y="103" '
+        f'text-anchor="middle">{score_text}</text>'
+        '<text class="ak-score-curve-caption" x="140" y="120" '
+        'text-anchor="middle">Exact model score</text>'
+        f'<text class="ak-score-curve-tick" x="18" y="151">{scale_ticks[0]}</text>'
+        f'<text class="ak-score-curve-tick" x="140" y="151" '
+        f'text-anchor="middle">{scale_ticks[1]}</text>'
+        f'<text class="ak-score-curve-tick" x="262" y="151" '
+        f'text-anchor="end">{scale_ticks[2]}</text>'
+        "</svg></div></div>"
         "</section>",
         unsafe_allow_html=True,
     )
@@ -291,17 +479,24 @@ def render_factor_list(
     *,
     direction_label: str,
 ) -> None:
-    """Render backend-ranked localized factors with accessible direction words."""
+    """Render backend-ranked localized factors as horizontal SHAP bars."""
     st.markdown(f"#### {title}")
     if not factors:
         st.caption("No material factors were returned in this direction.")
         return
     tone = "danger" if "increas" in direction_label.lower() else "success"
+    magnitude = max((abs(factor.shap_value) for factor in factors), default=0.0)
     items = "".join(
         f'<div class="ak-factor-row {tone}">'
-        f"<div><strong>{escape(factor.feature_label)}</strong>"
-        f"<p>{escape(factor.text)}</p></div>"
-        f"<span>{escape(direction_label)}</span>"
+        '<div class="ak-factor-row-top">'
+        f"<strong>{escape(factor.feature_label)}</strong>"
+        f"<span>{factor.shap_value:+.3f}</span>"
+        "</div>"
+        '<div class="ak-factor-track">'
+        '<div class="ak-factor-fill" style="width: '
+        f'{(abs(factor.shap_value) / magnitude * 100) if magnitude else 0:.1f}%"></div>'
+        "</div>"
+        f"<p>{escape(factor.text)}</p>"
         "</div>"
         for factor in factors
     )

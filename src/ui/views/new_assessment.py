@@ -22,12 +22,13 @@ from src.application.assessment import AssessmentError
 from src.storage.assessment_store import AssessmentPersistenceError
 from src.ui.components import (
     render_failure_panel,
-    render_metric_rows,
+    render_financial_summary,
     render_page_header,
     render_panel_heading,
     render_step_bar,
     render_score_panel,
     render_factor_list,
+    render_table,
     render_validation_counters,
 )
 from src.ui.services import (
@@ -313,45 +314,21 @@ def _rejection_table(result: object) -> pd.DataFrame:
 
 
 def _render_financial_preview(feature: pd.Series) -> None:
-    first, second = st.columns(2, gap="large")
-    with first:
-        render_panel_heading("Cash-flow behaviour")
-        render_metric_rows(
-            (
-                (
-                    "Observed inflows",
-                    f"{_format_number(feature['inflow_total'])} units",
-                ),
-                (
-                    "Observed outflows",
-                    f"{_format_number(feature['outflow_total'])} units",
-                ),
-                ("Net flow", f"{_format_number(feature['net_flow_total'])} units"),
-                (
-                    "Negative-flow months",
-                    _format_number(feature["negative_net_months"], decimals=0),
-                ),
-            )
-        )
-    with second:
-        render_panel_heading("Account activity")
-        render_metric_rows(
-            (
-                ("Transactions / month", _format_number(feature["tx_per_month"])),
-                ("Active months", _format_number(feature["active_months"], decimals=0)),
-                ("Mean balance", f"{_format_number(feature['mean_balance'])} units"),
-                ("Low-balance rate", f"{float(feature['low_balance_rate']):.1%}"),
-            )
-        )
+    render_financial_summary(
+        inflows=_format_number(feature["inflow_total"]),
+        outflows=_format_number(feature["outflow_total"]),
+        net_flow=_format_number(feature["net_flow_total"]),
+        negative_months=_format_number(feature["negative_net_months"], decimals=0),
+        transactions_per_month=_format_number(feature["tx_per_month"]),
+        active_months=_format_number(feature["active_months"], decimals=0),
+        mean_balance=_format_number(feature["mean_balance"]),
+        low_balance_rate=f"{float(feature['low_balance_rate']):.1%}",
+    )
 
     with st.expander("Review all model input features"):
         names = [name for name in feature.index if name != "applicant_id"]
-        st.dataframe(
-            pd.DataFrame(
-                {"Feature": names, "Value": [feature[name] for name in names]}
-            ),
-            hide_index=True,
-            use_container_width=True,
+        render_table(
+            pd.DataFrame({"Feature": names, "Value": [feature[name] for name in names]})
         )
 
 
@@ -374,9 +351,7 @@ def _render_validation_step() -> None:
         )
         if result.rejected_count:
             st.markdown("#### Records needing correction")
-            st.dataframe(
-                _rejection_table(result), hide_index=True, use_container_width=True
-            )
+            render_table(_rejection_table(result))
         if result.warnings:
             with st.expander(f"Review {len(result.warnings)} normalization warnings"):
                 for warning in result.warnings:
@@ -389,10 +364,9 @@ def _render_validation_step() -> None:
                 "An assessment cannot run without accepted transaction evidence.",
             )
         else:
-            st.markdown("#### Financial summary")
-            st.caption(
-                "Amounts remain in provider wallet units. No currency conversion has "
-                "been inferred."
+            st.markdown(
+                '<h4 class="ak-section-title">Financial summary</h4>',
+                unsafe_allow_html=True,
             )
             _render_financial_preview(st.session_state.feature_preview)
 
@@ -686,9 +660,11 @@ def _render_decision_step() -> None:
     if st.session_state.decision_saved:
         first, second = st.columns(2)
         with first:
-            if st.button("Start new assessment", use_container_width=True):
-                reset_assessment()
-                st.rerun()
+            st.button(
+                "Start new assessment",
+                use_container_width=True,
+                on_click=reset_assessment,
+            )
         with second:
             if st.button("View session history", use_container_width=True):
                 navigate(Route.HISTORY)

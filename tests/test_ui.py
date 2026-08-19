@@ -16,6 +16,7 @@ from src.features.build_features import FEATURE_COLUMNS
 from src.ingestion.normalization import TransactionContext, normalize_transactions
 from src.storage.db import get_connection, initialize_schema
 from src.storage.seed_dashboard_demo import seed_dashboard_assessments
+from src.ui.components import render_score_panel
 from src.ui.services import UIInputError, parse_sms_records, read_csv_records
 
 
@@ -68,6 +69,26 @@ def _has_markdown(app: AppTest, text: str) -> bool:
     return any(text.lower() in str(item.value).lower() for item in app.markdown)
 
 
+def test_small_model_score_has_truthful_magnified_detail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rendered: list[str] = []
+    monkeypatch.setattr(
+        "src.ui.components.st.markdown",
+        lambda body, **_: rendered.append(str(body)),
+    )
+
+    render_score_panel(0.005, "test_v1")
+
+    html = "".join(rendered)
+    assert ">0.0050</text>" in html
+    assert "Magnified 0.000–0.010 view" in html
+    assert 'class="ak-score-curve-progress"' in html
+    assert 'stroke-dasharray="50.0 100"' in html
+    assert "Magnified because" not in html
+    assert "loan officer makes the final decision" not in html
+
+
 def test_application_loads_and_default_navigation_works(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -78,7 +99,7 @@ def test_application_loads_and_default_navigation_works(
     assert not app.exception
     button_labels = {button.label for button in app.button}
     assert {"Overview", "New Assessment", "History", "Settings"} <= button_labels
-    assert _has_markdown(app, "Credit assessment workspace")
+    assert _has_markdown(app, "Loan assessment overview")
 
     _button(app, "History").click().run()
     assert not app.exception
@@ -165,7 +186,12 @@ def test_zero_valid_records_block_assessment() -> None:
     assert not app.exception
     assert _has_markdown(app, "No valid transactions are available")
     assert _button(app, "Continue to assessment").disabled
-    assert len(app.dataframe) == 1
+    # The rejection table is a themed HTML table (ak-table), not a native
+    # st.dataframe, so it shows up in app.markdown rather than app.dataframe.
+    # (Match the HTML attribute, not just the class name, so the injected
+    # theme.css — which also contains the literal string "ak-table-wrap" in
+    # its own selectors — doesn't count as a second match.)
+    assert sum('class="ak-table-wrap"' in str(item.value) for item in app.markdown) == 1
 
 
 def test_model_missing_state_is_understandable(
@@ -264,6 +290,15 @@ def test_complete_assessment_language_and_persistence_workflow(
     assert audit[1] == audit[2] + audit[3]
     assert app.session_state["decision_saved"] is True
     assert app.session_state["session_history"][0]["decision"] == "Review"
+
+    _button(app, "Start new assessment").click().run()
+
+    assert not app.exception
+    assert app.session_state["assessment_step"] == 0
+    assert app.session_state["decision_value"] is None
+    assert app.session_state["decision_rationale"] == ""
+    assert app.session_state["session_history"][0]["decision"] == "Review"
+    assert _has_markdown(app, "Applicant")
 
 
 def test_upload_adapters_reject_empty_input() -> None:
